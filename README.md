@@ -1,6 +1,6 @@
 # uleska-automate
 Uleska CLI for ease of integration with CI/CD and similar systems
-
+```
 usage: uleska-automate.py [-h] --uleska_host ULESKA_HOST --token TOKEN
                           [--application_id APPLICATION_ID]
                           [--version_id VERSION_ID]
@@ -43,4 +43,4 @@ optional arguments:
   --get_ids             Retrieve GUID for the application_name and
                         version_name supplied
   --debug               Prints debug messages
- 
+ ```
