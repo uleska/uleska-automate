@@ -43,3 +43,4 @@ optional arguments:
   --get_ids             Retrieve GUID for the application_name and
                         version_name supplied
   --debug               Prints debug messages
+ 
