@@ -1,6 +1,17 @@
 # uleska-automate
 Uleska CLI for ease of integration with CI/CD and similar systems
 ```
+
+ ___  ___  ___       _______   ________  ___  __    ________     
+|\  \|\  \|\  \     |\  ___ \ |\   ____\|\  \|\  \ |\   __  \    
+\ \  \\\  \ \  \    \ \   __/|\ \  \___|\ \  \/  /|\ \  \|\  \   
+ \ \  \\\  \ \  \    \ \  \_|/_\ \_____  \ \   ___  \ \   __  \  
+  \ \  \\\  \ \  \____\ \  \_|\ \|____|\  \ \  \\ \  \ \  \ \  \ 
+   \ \_______\ \_______\ \_______\____\_\  \ \__\\ \__\ \__\ \__\
+    \|_______|\|_______|\|_______|\_________\|__| \|__|\|__|\|__|
+                                 \|_________|                    
+                                 
+                                 
 usage: uleska-automate.py [-h] --uleska_host ULESKA_HOST --token TOKEN
                           [--application_id APPLICATION_ID]
                           [--version_id VERSION_ID]
