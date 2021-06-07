@@ -1,5 +1,7 @@
 # uleska-automate
+
 Uleska CLI for ease of integration with CI/CD and similar systems
+
 ```
 
  ___  ___  ___       _______   ________  ___  __    ________     
@@ -56,7 +58,8 @@ optional arguments:
   --debug               Prints debug messages
  ```
 
-Example usage:
+
+## Example usage:
 
 ```
 # python3 uleska-automate.py --uleska_host https://uleska.example.com/ --application_name demo_UnSAFE_Bank --version_name v1 --token c64Ca28whEAIkFYlzO8clRutrlwVws2pF9999999999 --test_and_compare
@@ -231,5 +234,65 @@ NEW ISSUE in this toolkit run:
 
     New risk in this tookit run    = $215,000
 ```
+
+
+## Detailed Info on the Paramaters
+
+
+The Uleska CLI allows you to perform a number of functions as described below.  These functions will rely on a combination of parameters being passed.
+
+#### --uleska_host
+
+REQUIRED.  This is the hostname (or hostname and domainname as needed) of the Uleska Platform the CLI script is to invoke the testing or commands on.  For example, if you have the Uleska Platform installed at uleska.example.com, you would set this parameter to https://uleska.example.com/ .  Note the final forward slash is required.
+
+#### --token
+
+REQUIRED.  Provide the API authentication token retrieved for your chosen user.  See the relevant part of this documentation guide for more information on retrieving auth tokens from the Uleska Platform.
+
+#### --application_name
+
+The text name of the application descriptor in the Uleska Platform to be tested.  This must be an exact string match.  Note - if application_name or version_name are supplied to the CLI then any applicaiton_id or version_id supplied will be ignored.  You must supply a combination of application_name and application_version to identify the testing toolkit and set up to be tested.
+
+#### --version_name
+
+The text name of the version descriptor in the Uleska Platform to be tested.  This must be an exact string match.  Note - if application_name or version_name are supplied to the CLI then any applicaiton_id or version_id supplied will be ignored.  You must supply a combination of application_name and application_version to identify the testing toolkit and set up to be tested.
+
+#### --applicaton_id
+
+The GUID associated with the application descriptor in the Uleska Platform.  This must be an exact string match.  The application ID can be retrieved using the 'get_ids' function of the CLI (see later), or can be viewed in the URL when accessing the application via the Uleska UI (after "/applications/").  Note - if application_name or version_name are supplied to the CLI then any applicaiton_id or version_id supplied will be ignored.
+
+#### --version_id
+
+The GUID associated with the version descriptor in the Uleska Platform.  This must be an exact string match.  The version ID can be retrieved using the 'get_ids' function of the CLI (see later), or can be viewed in the URL when accessing the application via the Uleska UI (after "/versions/").  Note - if application_name or version_name are supplied to the CLI then any applicaiton_id or version_id supplied will be ignored.
+
+#### --debug
+
+Turns on debugging mode within the CLI script.  Nuf said.
+
+#### --test
+
+Contacts the Uleska Platfom API and invokes the testing toolkit for the application and version specified.  Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  This starts the testing toolkit only, and does not block until the toolkit is finished, or process any results.  If your pipeline wants to start the testing in one place, and then check the results later, this is the function to use.
+
+#### --test_and_results
+
+Contacts the Uleska Platfom API and invokes the testing toolkit for the application and version specified, as well as blocking for the testing toolkit to complete, when it then retrieves the results.  Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  This will wait until the toolkit is finished, giving updates as it goes along.  When the toolkit has completed, it will retrieve the results of the latest report and display.  If your pipeline wants to start the testing and hold for the results of the latest test to be shown, then use this function.
+
+#### --test_and_compare
+
+Contacts the Uleska Platfom API and invokes the testing toolkit for the application and version specified, as well as blocking for the testing toolkit to complete, when it then retrieves the latest results and compares those results to the previous results, highlighting any new or fixed issues.  Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  This will wait until the toolkit is finished, giving updates as it goes along.  When the toolkit has completed, it will retrieve the results of the latest report, as well as the previous report, and display the differences in risk and issues between those reports.  If you want to know 'what's changed' since the last run through the pipeline, this function will highlight new issues found since the last run, as well as issues fixed.  It'll also show the differences in numbers of issues and risk.  This means you can program automated logic around the testing in your pipeline, e.g. flagging the build or alerting something if the risk or number of issues goes above a specified value, or if issues of type X are found, or based on CVSS, etc.
+
+#### --latest_results
+
+Contacts the Uleska Platfom API and only retrieves the results of the latest scan for the application and version specified. Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  If your pipeline wants to start the testing somewhere else, and come back later for the results, this is the way to get those results in a non-blocking way.  This is the non-blocking equivalent of --test_and_results (only it doesn't kick off the tests).
+
+#### --compare_latest_results
+
+Contacts the Uleska Platfom API for the latest, and previous results related to the application and version specified, when it then compares those results to the previous results, highlighting any new or fixed issues.   Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  If your pipeline wants to start the testing somewhere else, and come back later for the results to be compared to see what's changed since the last run, this is the way to get those results in a non-blocking way.  This is the non-blocking equivalent of --test_and_compare (only it doesn't kick off the tests).
+
+#### --get_ids
+
+Helper function that takes in the --application_name and --version_name and gives the GUIDs associated with each.  Helpful when you don't have access to the UI, or are just to lazy to log in.
+
+Note that any results returned will not have 'invalid issues' displayed or compared (e.g. issues marked as false positives, duplicates, or non-issues).
 
 For more details on the usage of the Uleska CLI, view the documentation at https://www.uleska.com
