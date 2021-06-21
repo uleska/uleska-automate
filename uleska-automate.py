@@ -446,8 +446,8 @@ def get_report_info(host, application, version, token, reports_dict, index):
     
     print ("Getting information on this report")
     
-    # Just wait a few seconds  
-    time.sleep(3)
+    # Just wait a few seconds for the background thread to update the report (encase the scan has *just* finished)  
+    time.sleep(5)
     
     # Get the report id for the scan
     latest_report_handle = reports_dict[index] # -1
