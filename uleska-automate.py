@@ -258,7 +258,7 @@ def run_scan_blocking(host, application, version, token):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     #Build API URL
@@ -348,7 +348,7 @@ def run_scan(host, application, version, token):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     #Build API URL
@@ -387,7 +387,7 @@ def get_reports_list(host, application, version, token):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
     
 
@@ -531,7 +531,7 @@ def get_reports_dict(host, application, version, token, report):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
     
     GetLatestReportsURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions/" + version + "/reports/" + report.id + "/vulnerabilities"
