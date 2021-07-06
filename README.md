@@ -21,7 +21,7 @@ usage: uleska-automate.py [-h] --uleska_host ULESKA_HOST --token TOKEN
                           [--version_name VERSION_NAME] [--test]
                           [--test_and_results] [--test_and_compare]
                           [--latest_results] [--compare_latest_results]
-                          [--get_ids] [--debug]
+                          [--print_json] [--get_ids] [--debug]
 
 Uleska command line interface. To identify the project/pipeline to test you
 can specify either --application_name and --version_name, or --application and
@@ -53,6 +53,7 @@ optional arguments:
   --compare_latest_results
                         Retrieve the latest test results for application and
                         version and compare
+  --print_json          Print the relevant output as JSON to stdout
   --get_ids             Retrieve GUID for the application_name and
                         version_name supplied
   --debug               Prints debug messages
@@ -288,6 +289,10 @@ Contacts the Uleska Platfom API and only retrieves the results of the latest sca
 #### --compare_latest_results
 
 Contacts the Uleska Platfom API for the latest, and previous results related to the application and version specified, when it then compares those results to the previous results, highlighting any new or fixed issues.   Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  If your pipeline wants to start the testing somewhere else, and come back later for the results to be compared to see what's changed since the last run, this is the way to get those results in a non-blocking way.  This is the non-blocking equivalent of --test_and_compare (only it doesn't kick off the tests).
+
+#### --print_json
+
+Usable with --test_and_results, --test_and_compare, --latest_results, and --compare_latest_results.  Takes the information returned by the Uleska Platform and prints it to stdout in JSON format.
 
 #### --get_ids
 
