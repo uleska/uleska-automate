@@ -11,6 +11,9 @@ class issue_info:
     CVSS = ""
     affectedURL = ""
     summary = ""
+    severity = ""
+    explanation = ""
+    recommendation = ""
 
 class ids:
     application_id = ""
@@ -39,7 +42,7 @@ def _main():
 
     arg_options.add_argument('--latest_results', help="Retrieve the latest test results for application and version referenced", action="store_true")
     arg_options.add_argument('--compare_latest_results', help="Retrieve the latest test results for application and version and compare", action="store_true")
-
+    arg_options.add_argument('--print_json', help="Print the relevant output as JSON to stdout", action="store_true")
     arg_options.add_argument('--get_ids', help="Retrieve GUID for the application_name and version_name supplied", action="store_true")
 
     #arg_options.add_argument('--add_version', help="Add a new version (pipeline) to the application referenced", action="store_true")
@@ -61,6 +64,7 @@ def _main():
     comapre_latest_results = False
     add_version = False
     get_ids = False
+    print_json = False
 
     application_name = ""
     version_name = ""
@@ -136,6 +140,11 @@ def _main():
         if debug:
             print("compare_latest_results enabled")
 
+    #Set print_json flag
+    if args.print_json:
+        print_json = True
+
+
     #Set add_version
     #if args.add_version:
     #    add_version = True
@@ -166,9 +175,10 @@ def _main():
 
 
     if application_name != "" or version_name != "":
-        print("Application or version name passed, looking up ids...")
+        if not print_json:
+            print("Application or version name passed, looking up ids...")
         #results = ids()
-        results = map_app_name_and_version_to_ids(host, application_name, version_name, token)
+        results = map_app_name_and_version_to_ids(host, application_name, version_name, token, print_json)
 
         application = results.application_id
         version = results.version_id
@@ -181,15 +191,15 @@ def _main():
         # No action as map_app_name_and_version_to_ids will have already returned the ids
         pass
     elif test_and_compare:
-        run_test_and_compare(host, application, version, token)
+        run_test_and_compare(host, application, version, token, print_json)
     elif test_and_results:
-        run_test_and_results(host, application, version, token)
+        run_test_and_results(host, application, version, token, print_json)
     elif test:
-        run_scan(host, application, version, token)
+        run_scan(host, application, version, token, print_json)
     elif latest_results:
-        run_latest_results(host, application, version, token)
+        run_latest_results(host, application, version, token, print_json)
     elif compare_latest_results:
-        run_compare_latest_results(host, application, version, token)
+        run_compare_latest_results(host, application, version, token, print_json)
     elif add_version:
         run_add_version(host, application, version, token, version_name)
     else:
@@ -197,61 +207,113 @@ def _main():
 
 
 
-def run_test_and_results(host, application, version, token):
+def run_test_and_results(host, application, version, token, print_json):
 
     # First run a new scan in blocking mode (so we can check the results afterwards
-    run_scan_blocking(host, application, version, token)
+    run_scan_blocking(host, application, version, token, print_json)
 
-    reports = get_reports_list(host, application, version, token)
+    reports = get_reports_list(host, application, version, token, print_json)
 
-    report_info = get_report_info(host, application, version, token, reports, -1)
+    report_info = get_report_info(host, application, version, token, reports, -1, print_json)
 
-    print_report_info(report_info, "Latest")
+    results = print_report_info(report_info, "Latest", print_json)
+
+    if print_json:
+        output = {}
+        results_to_print = []
+        overall_risk = 0
+
+        for i in results:
+
+            json_issue = {}
+            json_issue['title'] = i.title
+            json_issue['tool'] = i.tool
+            json_issue['risk'] = i.total_cost
+            json_issue['cvss'] = i.CVSS
+            json_issue['summary'] = i.summary
+            json_issue['severity'] = i.severity
+            json_issue['explanation'] = i.explanation
+            json_issue['recommendation'] = i.recommendation
+
+            overall_risk += i.total_cost
+
+            results_to_print.append(json_issue)
+
+        output['overall_risk'] = overall_risk
+        output['num_issues'] = len(results)
+        output['issues'] = results_to_print
+
+        print ( json.dumps(output, indent=4, sort_keys=True) )
+
+
+def run_latest_results(host, application, version, token, print_json):
+
+    reports = get_reports_list(host, application, version, token, print_json)
+
+    report_info = get_report_info(host, application, version, token, reports, -1, print_json)
+
+    results = print_report_info(report_info, "Latest", print_json)
+
+    if print_json:
+        output = {}
+        results_to_print = []
+        overall_risk = 0
+
+        for i in results:
+
+            json_issue = {}
+            json_issue['title'] = i.title
+            json_issue['tool'] = i.tool
+            json_issue['risk'] = i.total_cost
+            json_issue['cvss'] = i.CVSS
+            json_issue['summary'] = i.summary
+            json_issue['severity'] = i.severity
+            json_issue['explanation'] = i.explanation
+            json_issue['recommendation'] = i.recommendation
+
+            overall_risk += i.total_cost
+
+            results_to_print.append(json_issue)
+
+        output['overall_risk'] = overall_risk
+        output['num_issues'] = len(results)
+        output['issues'] = results_to_print
+
+        print ( json.dumps(output, indent=4, sort_keys=True) )
+
+
+def run_compare_latest_results(host, application, version, token, print_json):
+
+    reports = get_reports_list(host, application, version, token, print_json)
+
+    latest_report_info = get_report_info(host, application, version, token, reports, -1, print_json)
+
+    penultumate_report_info = get_report_info(host, application, version, token, reports, -2, print_json)
+
+    compare_report_infos(latest_report_info, penultumate_report_info, print_json)
 
 
 
-
-def run_latest_results(host, application, version, token):
-
-    reports = get_reports_list(host, application, version, token)
-
-    report_info = get_report_info(host, application, version, token, reports, -1)
-
-    print_report_info(report_info, "Latest")
-
-
-
-def run_compare_latest_results(host, application, version, token):
-
-    reports = get_reports_list(host, application, version, token)
-
-    latest_report_info = get_report_info(host, application, version, token, reports, -1)
-
-    penultumate_report_info = get_report_info(host, application, version, token, reports, -2)
-
-    compare_report_infos(latest_report_info, penultumate_report_info)
-
-
-
-def run_test_and_compare(host, application, version, token):
+def run_test_and_compare(host, application, version, token, print_json):
 
     # First run a new scan in blocking mode (so we can check the results afterwards
-    run_scan_blocking(host, application, version, token)
+    run_scan_blocking(host, application, version, token, print_json)
 
-    reports = get_reports_list(host, application, version, token)
+    reports = get_reports_list(host, application, version, token, print_json)
 
-    latest_report_info = get_report_info(host, application, version, token, reports, -1)
+    latest_report_info = get_report_info(host, application, version, token, reports, -1, print_json)
 
-    penultumate_report_info = get_report_info(host, application, version, token, reports, -2)
+    penultumate_report_info = get_report_info(host, application, version, token, reports, -2, print_json)
 
-    compare_report_infos(latest_report_info, penultumate_report_info)
+    compare_report_infos(latest_report_info, penultumate_report_info, print_json)
 
 
 
 # Runs a scan and waits until it's completed.
-def run_scan_blocking(host, application, version, token):
+def run_scan_blocking(host, application, version, token, print_json):#Set compare_latest_results
 
-    print ("Running blocking scan")
+    if not print_json:
+        print ("Running blocking scan")
 
     s = requests.Session()
 
@@ -266,7 +328,8 @@ def run_scan_blocking(host, application, version, token):
     ScanURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions/" + version + "/scan"
 
     #Run scan
-    print("Kicking off the scan")
+    if not print_json:
+        print("Kicking off the scan")
 
     try:
         StatusResponse = s.request("Get", ScanURL)
@@ -280,7 +343,8 @@ def run_scan_blocking(host, application, version, token):
         sys.exit()
 
     #time.sleep(10)
-    print("Scan running")
+    if not print_json:
+        print("Scan running")
 
 
     #### Scan should be running, run check scans to see if it's still running
@@ -313,7 +377,8 @@ def run_scan_blocking(host, application, version, token):
 
         if len(running_scans_json) == 0:
             #### if there's no scans running, then it must have finished
-            print ("No more scans running\n")
+            if not print_json:
+                print ("No more scans running\n")
             scanfinished = True
             break
 
@@ -341,19 +406,22 @@ def run_scan_blocking(host, application, version, token):
         #print("DEBUG: Versions running = " + str(versions_running) )
 
         if version in versions_running:
-            print ("Our Toolkit " + version + " is still running, waiting...\n")
+            if not print_json:
+                print ("Our Toolkit " + version + " is still running, waiting...\n")
             time.sleep(10)
         else:
-            print ("Our Toolkit " + version + " has completed\n")
+            if not print_json:
+                print ("Our Toolkit " + version + " has completed\n")
             scanfinished = True
             break
 
 
 
 # Runs a scan and moves on with it's life.
-def run_scan(host, application, version, token):
+def run_scan(host, application, version, token, print_json):
 
-    print ("Running non-blocking scan")
+    if not print_json:
+        print ("Running non-blocking scan")
 
     s = requests.Session()
 
@@ -370,7 +438,8 @@ def run_scan(host, application, version, token):
     ScanURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions/" + version + "/scan"
 
     #Run scan
-    print("Kicking off the scan")
+    if not print_json:
+        print("Kicking off the scan")
 
     try:
         StatusResponse = s.request("Get", ScanURL)
@@ -383,16 +452,18 @@ def run_scan(host, application, version, token):
         print("Non 200 status code returned when running scan.  Code [" + str(StatusResponse.status_code) + "]")
         sys.exit()
 
-    print("Scan running, this is non-blocking mode so now exiting.")
+    if not print_json:
+        print("Scan running, this is non-blocking mode so now exiting.")
 
 
 
 
 
 
-def get_reports_list(host, application, version, token):
+def get_reports_list(host, application, version, token, print_json):
 
-    print ("Getting list of reports for this pipeline")
+    if not print_json:
+        print ("Getting list of reports for this pipeline")
 
     s = requests.Session()
 
@@ -454,9 +525,10 @@ def get_reports_list(host, application, version, token):
 
 
 
-def get_report_info(host, application, version, token, reports_dict, index):
+def get_report_info(host, application, version, token, reports_dict, index, print_json):
 
-    print ("Getting information on this report")
+    if not print_json:
+        print ("Getting information on this report")
 
     # Just wait a few seconds for the background thread to update the report (encase the scan has *just* finished)
     time.sleep(10)
@@ -475,9 +547,14 @@ def get_report_info(host, application, version, token, reports_dict, index):
 
 
 
-def print_report_info(report_info, descriptor):
+def print_report_info(report_info, descriptor, print_json):
 
-    print ("\n=== Listing issues in " + descriptor + " report =======================")
+    #if print_json:
+    #    print ( json.dumps(report_info, indent=4, sort_keys=True) )
+    #    return
+
+    if not print_json:
+        print ("\n=== Listing issues in " + descriptor + " report =======================")
 
     report_issues = []
 
@@ -506,6 +583,15 @@ def print_report_info(report_info, descriptor):
         if 'totalCost' in reported_issue:
             this_issue.total_cost = reported_issue['totalCost']
 
+        if 'vulnerabilitySeverity' in reported_issue:
+            this_issue.severity = reported_issue['vulnerabilitySeverity']
+
+        if 'explanation' in reported_issue:
+            this_issue.explanation = reported_issue['explanation']
+
+        if 'recommendation' in reported_issue:
+            this_issue.recommendation = reported_issue['recommendation']
+
         if 'vulnerabilityDefinition' in reported_issue:
             this_issue.CVSS = reported_issue['vulnerabilityDefinition']['standards'][0]['description'] + " : " + reported_issue['vulnerabilityDefinition']['standards'][0]['title']
 
@@ -514,17 +600,18 @@ def print_report_info(report_info, descriptor):
     total_risk = 0
 
     for iss in report_issues:
-        print ("\nIssue [" + iss.title + "] from tool [" + iss.tool + "]")
-        print ("Resource affected [" + iss.affectedURL + "]")
-        print ("Summary [" + iss.summary + "]")
-        print ("Cost [$" + str( f'{iss.total_cost:,}') + "]\n")
+        if not print_json:
+            print ("\nIssue [" + iss.title + "] from tool [" + iss.tool + "]")
+            print ("Resource affected [" + iss.affectedURL + "]")
+            print ("Summary [" + iss.summary + "]")
+            print ("Cost [$" + str( f'{iss.total_cost:,}') + "]\n")
         total_risk = total_risk + iss.total_cost
 
-
-    print ("\n" + descriptor + " security toolkit run:")
-    print ("    Total risk:                   = $" + str( f'{total_risk:,}' ))
-    print ("    Total issues:                 = " + str( len( report_issues ) ) )
-    print ("\n==============================================\n")
+    if not print_json:
+        print ("\n" + descriptor + " security toolkit run:")
+        print ("    Total risk:                   = $" + str( f'{total_risk:,}' ))
+        print ("    Total issues:                 = " + str( len( report_issues ) ) )
+        print ("\n==============================================\n")
 
     return report_issues
 
@@ -578,12 +665,13 @@ def get_reports_dict(host, application, version, token, report):
 
 
 
-def compare_report_infos(latest_report_info, penultumate_report_info):
+def compare_report_infos(latest_report_info, penultumate_report_info, print_json):
 
-    print ("Comparing the latest scan report with the previous one")
+    if not print_json:
+        print ("Comparing the latest scan report with the previous one")
 
-    latest_report_issues = print_report_info(latest_report_info, "Latest")
-    previous_report_issues = print_report_info(penultumate_report_info, "Previous")
+    latest_report_issues = print_report_info(latest_report_info, "Latest", print_json) #Pass false for 'json' as we want to print compare json, not each report
+    previous_report_issues = print_report_info(penultumate_report_info, "Previous", print_json)
 
     latest_risk = 0
     previous_risk = 0
@@ -604,32 +692,75 @@ def compare_report_infos(latest_report_info, penultumate_report_info):
         penultumate_report_titles.append(prev_iss.title)
 
 
+    results = {}
+
+
     if previous_risk == latest_risk:
-        print ("\nNo change in risk levels since last check\n")
+        if not print_json:
+            print ("\nNo change in risk levels since last check\n")
+        results['risk_increase'] = 0
+        results['risk_decrease'] = 0
+        results['risk_increase_percentage'] = 0
+        results['risk_decrease_percentage'] = 0
     elif previous_risk > latest_risk:
         reduced = previous_risk - latest_risk
-        print ("\n    Risk level has REDUCED by       $" + str( f'{reduced:,}' ))
+        if not print_json:
+            print ("\n    Risk level has REDUCED by       $" + str( f'{reduced:,}' ))
         reduced_percentage = ( 100 - ( 100 / previous_risk ) * latest_risk )
-        print ("    Risk level has REDUCED by       " + str( reduced_percentage )[0:4] + "%\n")
+        if not print_json:
+            print ("    Risk level has REDUCED by       " + str( reduced_percentage )[0:4] + "%\n")
+
+        results['risk_increase'] = 0
+        results['risk_decrease'] = reduced
+        results['risk_increase_percentage'] = 0
+        results['risk_decrease_percentage'] = reduced_percentage
     else:
         increased = latest_risk - previous_risk
-        print ("\n    Risk level has INCREASED by    $" + str( f'{increased:,}' ))
+        if not print_json:
+            print ("\n    Risk level has INCREASED by    $" + str( f'{increased:,}' ))
         increased_percentage = ( ( ( 100 / previous_risk  ) * latest_risk ) - 100)
-        print ("    Risk level has INCREASED by     " + str( increased_percentage )[0:4] + "%\n")
+        if not print_json:
+            print ("    Risk level has INCREASED by     " + str( increased_percentage )[0:4] + "%\n")
 
+        results['risk_increase'] = increased
+        results['risk_decrease'] = 0
+        results['risk_increase_percentage'] = increased_percentage
+        results['risk_decrease_percentage'] = 0
 
     if len(latest_report_issues) == len(previous_report_issues):
-        print ("No change in number of issues since last check\n")
-        return
+        if not print_json:
+            print ("No change in number of issues since last check\n")
+        results['num_increase'] = 0
+        results['num_decrease'] = 0
+        results['num_increase_percentage'] = 0
+        results['num_decrease_percentage'] = 0
     elif len (latest_report_issues) < len(previous_report_issues):
-        print("    Number of issues has REDUCED by   " + str ( ( len (previous_report_issues) - len(latest_report_issues) ) ) )
+        if not print_json:
+            print("    Number of issues has REDUCED by   " + str ( ( len (previous_report_issues) - len(latest_report_issues) ) ) )
         reduced_issue_percentage = ( 100 - ( 100 / len(previous_report_issues) ) * len (latest_report_issues) )
-        print ("    Number of issues has REDUCED by   " + str( reduced_issue_percentage )[0:4] + "%\n")
-    else:
-        print("    Number of issues has INCREASED by   " + str( ( len(latest_report_issues) - len(previous_report_issues) ) ) )
-        increased_issue_percentage = ( ( ( 100 / len (previous_report_issues) ) * len(latest_report_issues) ) - 100 )
-        print ("    Number of issues has INCREASED by   " + str( increased_issue_percentage )[0:4] + "%\n")
+        if not print_json:
+            print ("    Number of issues has REDUCED by   " + str( reduced_issue_percentage )[0:4] + "%\n")
 
+        results['num_increase'] = 0
+        results['num_decrease'] = len (previous_report_issues) - len(latest_report_issues)
+        results['num_increase_percentage'] = 0
+        results['num_decrease_percentage'] = reduced_issue_percentage
+    else:
+        if not print_json:
+            print("    Number of issues has INCREASED by   " + str( ( len(latest_report_issues) - len(previous_report_issues) ) ) )
+        increased_issue_percentage = ( ( ( 100 / len (previous_report_issues) ) * len(latest_report_issues) ) - 100 )
+        if not print_json:
+            print ("    Number of issues has INCREASED by   " + str( increased_issue_percentage )[0:4] + "%\n")
+
+        results['num_increase'] = len(latest_report_issues) - len(previous_report_issues)
+        results['num_decrease'] = 0
+        results['num_increase_percentage'] = increased_issue_percentage
+        results['num_decrease_percentage'] = 0
+
+
+
+    new_issues = []
+    json_issues_dict = []
 
     ### penultumate_report_titles is set, so is latest_report_titles, how do I compare them?
     new_risk = 0
@@ -641,16 +772,35 @@ def compare_report_infos(latest_report_info, penultumate_report_info):
             continue
         else:
             # It's a new issue
-            print ("\nNEW ISSUE in this toolkit run:")
+            if not print_json:
+                print ("\nNEW ISSUE in this toolkit run:")
+
+            json_issue = {}
+
 
             for i in latest_report_issues:
                 if i.title == latest_title:
-                    print ("        " + i.title + ": tool [" + i.tool + "]:     Risk $" + str( f'{i.total_cost:,}' ) + "" )
-                    print ("        CVSS : " + i.CVSS )
+                    if not print_json:
+                        print ("        " + i.title + ": tool [" + i.tool + "]:     Risk $" + str( f'{i.total_cost:,}' ) + "" )
+                        print ("        CVSS : " + i.CVSS )
                     new_risk = new_risk + i.total_cost
 
+                    json_issue['title'] = i.title
+                    json_issue['tool'] = i.tool
+                    json_issue['risk'] = i.total_cost
+                    json_issue['cvss'] = i.CVSS
+                    json_issue['summary'] = i.summary
+                    json_issue['severity'] = i.severity
+                    json_issue['explanation'] = i.explanation
+                    json_issue['recommendation'] = i.recommendation
+
+            new_issues.append( i )
+            json_issues_dict.append(json_issue)
+
+
     if new_risk is not 0:
-        print ("\n    New risk in this tookit run    = $" + str( f'{new_risk:,}'  ) )
+        if not print_json:
+            print ("\n    New risk in this tookit run    = $" + str( f'{new_risk:,}'  ) )
 
 
     for pen_title in penultumate_report_titles:
@@ -659,19 +809,23 @@ def compare_report_infos(latest_report_info, penultumate_report_info):
             # This issue is in both, don't mention
             continue
         else:
-            print ("\nISSUE FIXED before this toolkit run:")
+            if not print_json:
+                print ("\nISSUE FIXED before this toolkit run:")
 
-            for i in previous_report_issues:
-                if i.title == pen_title:
-                    print ("        " + i.title + ": tool [" + i.tool + "]:     Risk $" + str( f'{i.total_cost:,}' ) +"" )
-                    print ("        CVSS : " + i.CVSS )
-
-    print ("\n")
-
+                for i in previous_report_issues:
+                    if i.title == pen_title:
+                        print ("        " + i.title + ": tool [" + i.tool + "]:     Risk $" + str( f'{i.total_cost:,}' ) +"" )
+                        print ("        CVSS : " + i.CVSS )
 
 
+    results['new_issues'] = json_issues_dict
 
-def map_app_name_and_version_to_ids(host, application_name, version_name, token):
+    if print_json:
+        print( json.dumps(results, indent=4, sort_keys=True) )
+
+
+
+def map_app_name_and_version_to_ids(host, application_name, version_name, token, print_json):
 
     s = requests.Session()
 
@@ -716,7 +870,8 @@ def map_app_name_and_version_to_ids(host, application_name, version_name, token)
             if application['name'] == application_name:
                 #We have found the application, record the GUID
                 application_id = application['id']
-                print("Application ID found for [" + application_name +"]: " + application_id)
+                if not print_json:
+                    print("Application ID found for [" + application_name +"]: " + application_id)
 
                 # Now that we're in the right record for the application, find the version name
                 if 'versions' in application:
@@ -728,7 +883,8 @@ def map_app_name_and_version_to_ids(host, application_name, version_name, token)
                             if version['name'] == version_name:
                                 #We're in the right version, record the GUID
                                 version_id = version['id']
-                                print("Version ID found for [" + version_name +"]: " + version_id)
+                                if not print_json:
+                                    print("Version ID found for [" + version_name +"]: " + version_id)
 
                                 break
 
@@ -744,7 +900,8 @@ def map_app_name_and_version_to_ids(host, application_name, version_name, token)
     results.application_id = application_id
     results.version_id = version_id
 
-    print("Mapped names to ids: application name [" + application_name + "], id [" + results.application_id + "], version name [" + version_name + "] id [" + results.version_id + "]")
+    if not print_json:
+        print("Mapped names to ids: application name [" + application_name + "], id [" + results.application_id + "], version name [" + version_name + "] id [" + results.version_id + "]")
 
     return results
 
