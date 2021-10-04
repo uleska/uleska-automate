@@ -14,14 +14,22 @@ Uleska CLI for ease of integration with CI/CD and similar systems
                                  \|_________|                    
                                  
                                  
-usage: uleska-automate.py [-h] --uleska_host ULESKA_HOST --token TOKEN
-                          [--application_id APPLICATION_ID]
-                          [--version_id VERSION_ID]
-                          [--application_name APPLICATION_NAME]
-                          [--version_name VERSION_NAME] [--test]
-                          [--test_and_results] [--test_and_compare]
-                          [--latest_results] [--compare_latest_results]
-                          [--print_json] [--get_ids] [--debug]
+usage: uleska-automate [-h] --uleska_host ULESKA_HOST --token TOKEN
+                       [--application_id APPLICATION_ID]
+                       [--version_id VERSION_ID]
+                       [--application_name APPLICATION_NAME]
+                       [--version_name VERSION_NAME] [--sast_pipeline]
+                       [--sast_git SAST_GIT] [--sast_username SAST_USERNAME]
+                       [--sast_token SAST_TOKEN] [--tools TOOLS] [--test]
+                       [--test_and_results] [--test_and_compare]
+                       [--latest_results] [--compare_latest_results]
+                       [--print_json] [--get_ids] [--app_stats]
+                       [--fail_if_issue_risk_over FAIL_IF_ISSUE_RISK_OVER]
+                       [--fail_if_risk_over FAIL_IF_RISK_OVER]
+                       [--fail_if_risk_change_over FAIL_IF_RISK_CHANGE_OVER]
+                       [--fail_if_issues_over FAIL_IF_ISSUES_OVER]
+                       [--fail_if_issues_change_over FAIL_IF_ISSUES_CHANGE_OVER]
+                       [--fail_if_CVSS_over FAIL_IF_CVSS_OVER] [--debug]
 
 Uleska command line interface. To identify the project/pipeline to test you
 can specify either --application_name and --version_name, or --application and
@@ -41,6 +49,18 @@ optional arguments:
                         Name for the application to reference
   --version_name VERSION_NAME
                         Name for the version/pipeline to reference
+  --sast_pipeline       Add or update a SAST pipeline. Requires an pre-
+                        existing application. See documentation for other
+                        settings
+  --sast_git SAST_GIT   Git URL for SAST repo
+  --sast_username SAST_USERNAME
+                        If repo requires authentication, this is the username
+                        to use
+  --sast_token SAST_TOKEN
+                        If repo requires authentication, this is the token
+                        value to use
+  --tools TOOLS         List of tool names to use for this version. Used with
+                        --sast_pipeline. Comma separated
   --test                Run tests only for the application and version
                         referenced, do not wait for the results
   --test_and_results    Run tests for the application and version referenced,
@@ -51,11 +71,37 @@ optional arguments:
   --latest_results      Retrieve the latest test results for application and
                         version referenced
   --compare_latest_results
-                        Retrieve the latest test results for application and
-                        version and compare
+                        Retrieve the latest test results for version and
+                        compare
   --print_json          Print the relevant output as JSON to stdout
   --get_ids             Retrieve GUID for the application_name and
                         version_name supplied
+  --app_stats           Retrieve the latest risk and vulnerabiltiy for the
+                        whole application
+  --fail_if_issue_risk_over FAIL_IF_ISSUE_RISK_OVER
+                        Causes the CLI to return a failure if any new issue
+                        risk is over the integer specified
+  --fail_if_risk_over FAIL_IF_RISK_OVER
+                        Causes the CLI to return a failure if the risk is over
+                        the integer specified
+  --fail_if_risk_change_over FAIL_IF_RISK_CHANGE_OVER
+                        Causes the CLI to return a failure if the percentage
+                        change of increased risk is over the integer
+                        specified. Requires 'test_and_compare' or
+                        'compare_latest_results' functions
+  --fail_if_issues_over FAIL_IF_ISSUES_OVER
+                        Causes the CLI to return a failure if the number of
+                        issues is over the integer specified
+  --fail_if_issues_change_over FAIL_IF_ISSUES_CHANGE_OVER
+                        Causes the CLI to return a failure if the percentage
+                        change in new issues is over the integer specified.
+                        Requires 'test_and_compare' or
+                        'compare_latest_results' function
+  --fail_if_CVSS_over FAIL_IF_CVSS_OVER
+                        Causes the CLI to return a failure if the any new
+                        issue has a CVSS over the integer specified. Requires
+                        'test_and_compare' or 'compare_latest_results'
+                        function
   --debug               Prints debug messages
  ```
 
