@@ -19,7 +19,7 @@ class issue_info:
 class ids:
     application_id = ""
     version_id = ""
-
+    
 class failure_thresholds:
     fail_if_issue_risk_over = 0
     fail_if_risk_over = 0
@@ -31,7 +31,7 @@ class failure_thresholds:
 class version_info:
     name = ""
     id = ""
-
+    
 
 def _main():
 
@@ -47,13 +47,18 @@ def _main():
     arg_options.add_argument('--version_id', help="GUID for the application version/pipeline to reference", type=str)
     arg_options.add_argument('--application_name', help="Name for the application to reference", type=str)
     arg_options.add_argument('--version_name', help="Name for the version/pipeline to reference", type=str)
-
-    arg_options.add_argument('--sast_pipeline', help="Add or update a SAST pipeline.  Requires an pre-existing application. See documentation for other settings", action="store_true")
-    arg_options.add_argument('--sast_git', help="Git URL for SAST repo", type=str)
-    arg_options.add_argument('--sast_username', help="If repo requires authentication, this is the username to use", type=str)
-    arg_options.add_argument('--sast_token', help="If repo requires authentication, this is the token value to use", type=str)
-
-    arg_options.add_argument('--tools', help="List of tool names to use for this version.  Used with --sast_pipeline.  Comma separated", type=str)
+    
+    arg_options.add_argument('--update_sast', help="Add or update a SAST pipeline.  Requires an pre-existing application. See documentation for other settings", action="store_true")
+    arg_options.add_argument('--sast_git', help="Git URL for SAST repo.  Required with --update_sast.", type=str)
+    arg_options.add_argument('--sast_username', help="If repo requires authentication, this is the username to use.  Optional with --update_sast.", type=str)
+    arg_options.add_argument('--sast_token', help="If repo requires authentication, this is the token value to use.  Optional with --update_sast.", type=str)
+    
+    arg_options.add_argument('--tools', help="List of tool names to use for this version.  Optional with --update_sast.  Comma separated", type=str)
+    
+    arg_options.add_argument('--update_container', help="Update a container pipeline.  Requires an pre-existing application/config. See documentation for other settings", action="store_true")
+    arg_options.add_argument('--container_image', help="Name of image to use. Required with --update_container.", type=str)
+    arg_options.add_argument('--container_tag', help="Tag to use. Required with --update_container.", type=str)
+    arg_options.add_argument('--container_connection', help="Connection name to use for container access. Optional with --update_container.  If not included Docker Hub is assumed.", type=str)
 
     arg_options.add_argument('--test', help="Run tests only for the application and version referenced, do not wait for the results", action="store_true")
     arg_options.add_argument('--test_and_results', help="Run tests for the application and version referenced, and return the results from the last as JSON", action="store_true")
@@ -64,15 +69,13 @@ def _main():
     arg_options.add_argument('--print_json', help="Print the relevant output as JSON to stdout", action="store_true")
     arg_options.add_argument('--get_ids', help="Retrieve GUID for the application_name and version_name supplied", action="store_true")
     arg_options.add_argument('--app_stats', help="Retrieve the latest risk and vulnerabiltiy for the whole application", action="store_true")
-
+    
     arg_options.add_argument('--fail_if_issue_risk_over', help="Causes the CLI to return a failure if any new issue risk is over the integer specified", type=str)
     arg_options.add_argument('--fail_if_risk_over', help="Causes the CLI to return a failure if the risk is over the integer specified", type=str)
     arg_options.add_argument('--fail_if_risk_change_over', help="Causes the CLI to return a failure if the percentage change of increased risk is over the integer specified. Requires 'test_and_compare' or 'compare_latest_results' functions", type=str)
     arg_options.add_argument('--fail_if_issues_over', help="Causes the CLI to return a failure if the number of issues is over the integer specified", type=str)
     arg_options.add_argument('--fail_if_issues_change_over', help="Causes the CLI to return a failure if the percentage change in new issues is over the integer specified.  Requires 'test_and_compare' or 'compare_latest_results' function", type=str)
     arg_options.add_argument('--fail_if_CVSS_over', help="Causes the CLI to return a failure if the any new issue has a CVSS over the integer specified.  Requires 'test_and_compare' or 'compare_latest_results' function", type=str)
-
-    #arg_options.add_argument('--add_version', help="Add a new version (pipeline) to the application referenced", action="store_true")
 
     arg_options.add_argument('--debug', help="Prints debug messages", action="store_true")
 
@@ -93,17 +96,22 @@ def _main():
     get_ids = False
     app_stats = False
     print_json = False
-    sast_pipeline = False
-
+    update_sast = False
+    update_container = False
+    
     sast_git = ""
     sast_username = ""
     sast_token = ""
-
+    
     tools = ""
-
-
+    
+    container_image = ""
+    container_tag = ""
+    container_connection = ""
+    
+    
     thresholds = failure_thresholds()
-
+    
 
     application_name = ""
     version_name = ""
@@ -182,14 +190,7 @@ def _main():
     #Set print_json flag
     if args.print_json:
         print_json = True
-
-
-    #Set add_version
-    #if args.add_version:
-    #    add_version = True
-
-    #    if debug:
-    #        print("add_version enabled")
+        
 
     #Set get_ids
     if args.get_ids:
@@ -197,7 +198,7 @@ def _main():
 
         if debug:
             print("get_ids enabled")
-
+    
     #Set compare_app_results
     if args.app_stats:
         app_stats = True
@@ -222,39 +223,69 @@ def _main():
 
 
     #Grab SAST Pipeline from the command line arguments
-    if args.sast_pipeline:
-        sast_pipeline = True
+    if args.update_sast:
+        update_sast = True
 
         if debug:
-            print("sast_pipeline is set")
-
+            print("update_sast is set")
+            
     #Grab the SAST Git from the command line arguments
     if args.sast_git is not None:
         sast_git = args.sast_git
 
         if debug:
             print("sast_git: " + sast_git)
-
+            
     #Grab the SAST username from the command line arguments
     if args.sast_username is not None:
         sast_username = args.sast_username
 
         if debug:
             print("sast_username: " + sast_username)
-
+            
     #Grab the SAST token from the command line arguments
     if args.sast_token is not None:
         sast_token = args.sast_token
 
         if debug:
             print("sast_token: " + sast_token)
-
+            
     #Grab the tools string from the command line arguments (comma separated at this stage)
     if args.tools is not None:
         tools = args.tools
 
         if debug:
             print("tools: " + tools)
+    
+    
+    #Grab container Pipeline from the command line arguments
+    if args.update_container:
+        update_container = True
+
+        if debug:
+            print("update_container is set")
+            
+    #Grab the container image from the command line arguments
+    if args.container_image is not None:
+        container_image = args.container_image
+
+        if debug:
+            print("container_image: " + container_image)
+            
+    #Grab the container tag from the command line arguments
+    if args.container_tag is not None:
+        container_tag = args.container_tag
+
+        if debug:
+            print("container_tag: " + container_tag)
+            
+    #Grab the container connection from the command line arguments
+    if args.container_connection is not None:
+        container_connection = args.container_connection
+
+        if debug:
+            print("container_connection: " + container_connection)
+            
 
 
     #Grab the fail_if_issue_risk_over from the command line arguments
@@ -263,153 +294,190 @@ def _main():
 
         if debug:
             print("fail_if_issue_risk_over: " + str( thresholds.fail_if_issue_risk_over ) )
-
+            
     #Grab the fail_if_risk_over from the command line arguments
     if args.fail_if_risk_over is not None:
         thresholds.fail_if_risk_over = int( args.fail_if_risk_over )
 
         if debug:
             print("fail_if_risk_over: " + str( thresholds.fail_if_risk_over) )
-
+            
     #Grab the fail_if_risk_change_over from the command line arguments
     if args.fail_if_risk_change_over is not None:
         thresholds.fail_if_risk_change_over = int( args.fail_if_risk_change_over )
 
         if debug:
             print("fail_if_risk_change_over: " + str( thresholds.fail_if_risk_change_over) )
-
+    
     #Grab the fail_if_issues_over from the command line arguments
     if args.fail_if_issues_over is not None:
         thresholds.fail_if_issues_over = int( args.fail_if_issues_over )
 
         if debug:
             print("fail_if_issues_over: " + str( thresholds.fail_if_issues_over) )
-
+            
     #Grab the fail_if_issues_change_over from the command line arguments
     if args.fail_if_issues_change_over is not None:
         thresholds.fail_if_issues_change_over = int( args.fail_if_issues_change_over )
 
         if debug:
             print("fail_if_issues_change_over: " + str( thresholds.fail_if_issues_change_over) )
-
+    
     #Grab the fail_if_CVSS_over from the command line arguments
     if args.fail_if_CVSS_over is not None:
         thresholds.fail_if_CVSS_over = float( args.fail_if_CVSS_over )
 
         if debug:
             print("fail_if_CVSS_over: " + str( thresholds.fail_if_CVSS_over) )
-
-
-
+            
+            
+            
 
 
     if app_stats and application_name != "":
         # user is requesting app results (therefore won't pass an individual version)
         pass
+    
 
-    if sast_pipeline:
-        # when sast_pipeline is called, the version_name will be checked, updated, or added
-
-
+    if update_sast:
+        # when update_sast is called, the version_name will be checked, updated, or added
+        
+        
         # check we have application_name and version_name (required)
         if application_name == "" or version_name == "":
-            print("Error, for --sast_pipeline both --application_name and --version_name are required.")
+            print("Error, for --update_sast both --application_name and --version_name are required.")
             sys.exit(2)
-
-
+        
+        
         # map application_name to an id
         application = run_map_app_name_to_id(host, application_name, token, print_json)
-
+        
         # attempt to get the version id for the passed version name. This will return either the ID if it exists, or "" if it doesn't
         version = run_check_for_existing_version(host, application_name, version_name, token, print_json)
-
-
+        
+        
         # check the tools to use (these may be being updated)
         tools_list = tools.split(",")
-
+        
         # get list of tools & details from the system as JSON
         system_tools_list = run_get_tools_details(host, token, print_json)
-
+        
         # TODO - right now we don't check that
         #  a) if any tool supplied by user in tools_list doesn't match the system tools list
         #  b) we report on that (error to the user) or how to handle it
-
+        
         # create a store for the tools we're going to add
         tools_to_add = []
-
+        
         #build the tools body up so we can submit with our version creation/update
         # iterate through the system_tools_list we got and extract matching info
         for tool in system_tools_list:
-
+            
             if tool['title'] in tools_list:
                 #tool.remove('icon') # we don't use this
-
+                
                 this_tool = {}
-                this_tool['toolName'] = "CUSTOM"
-
+                this_tool['toolName'] = tool['name']
+                
                 orig_string = json.dumps( tool )
-
+                
                 this_tool['toolJson'] = orig_string
-
+                
                 tools_to_add.append( this_tool )
-
+                
             # What to do if a tool is supplied that is not in the list? TODO
-
-
+        
+        
         # check if version_name exists for the app
         if version == "":
-
+            
             #this version_name doesn't exist, create it depending on authentication needed
             if sast_git == "":
                 # if creating a new version, we need the git URL, return an error
-                print("Error, when passing --sast_pipeline for a new version, --sast_git URL is required")
+                print("Error, when passing --update_sast for a new version, --sast_git URL is required")
                 sys.exit(2)
-
+            
             if sast_username != "":
                 # user has passed sast_username, which means they'll need to pass the token
-
+                
                 if sast_token == "":
                     print("Error, when passing --sast_username to setup authentication, --sast_token is required")
                     sys.exit(2)
-
+                
                 # "user has passed both sast_username and sast_token
                 version = run_create_version_with_credentials(host, application, version_name, token, print_json, sast_git, sast_username, sast_token, tools_to_add)
-
+                
             else:
                 # user has not passed sast_username, so assume no credentials needed for this repo
                 version = run_create_version(host, application, version_name, token, print_json, sast_git, tools_to_add)
-
+            
         else:
-
+            
             version_data = {}
             # version does exist, so get the current info (as JSON), and update it
             version_data = run_get_verison_info(host, application, version, token, print_json)
-
+            
             # if sast_git was supplied, update this
             if sast_git != "":
                 # "updating sast_git
-
+                
                 version_data['scmConfiguration']['address'] = sast_git
-
+            
             # if username was passed, update it
             if sast_username != "":
                 # updating username
                 version_data['scmConfiguration']['identity'] = sast_username
                 version_data['scmConfiguration']['authenticationType'] = "USER_PASS"
-
+            
             # if sast_token was passed, update it
             # TODO - we don't check if this is passed with sast_username - should we require this?  Should someone update username but not token?
             if sast_token != "":
                 # updating sast_token
                 version_data['scmConfiguration']['secret'] = sast_token
-
+            
             # update the version
             run_update_version(host, application, version, token, print_json, version_data, tools_to_add)
-
-
-
-
-
+            
+            
+            
+            
+            
+    elif update_container:
+        # when update_container is called, the container config will be updated
+        
+        
+        # check we have application_name and version_name (required)
+        if application_name == "" or version_name == "":
+            print("Error, for --update_container both --application_name and --version_name are required.")
+            sys.exit(2)
+        
+        # check we have container_image and container_tag (required)
+        if container_image == "" or container_tag == "":
+            print("Error, for --update_container both --container_image and --container_tag are required.")
+            sys.exit(2)
+        
+        
+        # map application_name to an id
+        application = run_map_app_name_to_id(host, application_name, token, print_json)
+        
+        # attempt to get the version id for the passed version name. This will return either the ID if it exists, or "" if it doesn't
+        version = run_check_for_existing_version(host, application_name, version_name, token, print_json)
+        
+        
+        connection_id = ""
+        
+        # check if a connection was specified, if so, get the corresponding id
+        if container_connection != "":
+            connection_id = run_map_container_name_to_id(host, container_connection, token, print_json)
+        else:
+            connection_id = "null"
+        
+            
+        # update the container config
+        run_update_container_config(host, application, version, container_image, container_tag, connection_id, token, print_json)
+                   
+              
+            
     elif not app_stats and (application_name != "" or version_name != ""):
         if not print_json:
             print("Application or version name passed, looking up ids...")
@@ -454,7 +522,7 @@ def run_test_and_results(host, application, version, token, print_json, threshol
     report_info = get_report_info(host, application, version, token, reports, -1, print_json)
 
     results = print_report_info(report_info, "Latest", print_json)
-
+    
     max_cvss_found = 0.0
     max_issue_risk_found = 0
 
@@ -473,41 +541,41 @@ def run_test_and_results(host, application, version, token, print_json, threshol
         json_issue['severity'] = i.severity
         json_issue['explanation'] = i.explanation
         json_issue['recommendation'] = i.recommendation
-
+            
         if i.CVSS_value > max_cvss_found:
             max_cvss_found = i.CVSS_value
-
+    
         if i.total_cost > max_issue_risk_found:
             max_issue_risk_found = i.total_cost
 
         overall_risk += i.total_cost
 
         results_to_print.append(json_issue)
-
+    
     output['overall_risk'] = overall_risk
     output['num_issues'] = len(results)
     output['issues'] = results_to_print
-
+        
 
     if print_json:
         print ( json.dumps(output, indent=4, sort_keys=True) )
-
+    
     if (thresholds.fail_if_issue_risk_over > 0 and max_issue_risk_found > thresholds.fail_if_issue_risk_over):
         print ("Returning failure as fail_if_issue_risk_over threshold has been exceeded [risk is " + str( max_issue_risk_found ) +"].")
         sys.exit(1)
-
+        
     if (thresholds.fail_if_risk_over > 0 and output['overall_risk'] > thresholds.fail_if_risk_over):
         print ("Returning failure as fail_if_risk_over threshold has been exceeded [risk is " + str( output['overall_risk'] ) +"].")
         sys.exit(1)
-
+            
     if (thresholds.fail_if_issues_over > 0 and output['num_issues'] > thresholds.fail_if_issues_over):
         print ("Returning failure as fail_if_issues_over threshold has been exceeded [number of issues is " + str( output['num_issues'] ) +"].")
         sys.exit(1)
-
+        
     if (thresholds.fail_if_CVSS_over > 0 and max_cvss_found > thresholds.fail_if_CVSS_over):
         print ("Returning failure as fail_if_CVSS_over threshold has been exceeded [max CVSS found is " + str( max_cvss_found ) +"].")
         sys.exit(1)
-
+            
 
 
 
@@ -523,7 +591,7 @@ def run_latest_results(host, application, version, token, print_json, thresholds
 
     max_cvss_found = 0.0
     max_issue_risk_found = 0
-
+    
     output = {}
     results_to_print = []
     overall_risk = 0
@@ -539,10 +607,10 @@ def run_latest_results(host, application, version, token, print_json, thresholds
         json_issue['severity'] = i.severity
         json_issue['explanation'] = i.explanation
         json_issue['recommendation'] = i.recommendation
-
+            
         if i.CVSS_value > max_cvss_found:
             max_cvss_found = i.CVSS_value
-
+        
         if i.total_cost > max_issue_risk_found:
             max_issue_risk_found = i.total_cost
 
@@ -553,41 +621,41 @@ def run_latest_results(host, application, version, token, print_json, thresholds
     output['overall_risk'] = overall_risk
     output['num_issues'] = len(results)
     output['issues'] = results_to_print
-
+    
     if print_json:
         print ( json.dumps(output, indent=4, sort_keys=True) )
-
+        
     if (thresholds.fail_if_issue_risk_over > 0 and max_issue_risk_found > thresholds.fail_if_issue_risk_over):
         print ("Returning failure as fail_if_issue_risk_over threshold has been exceeded [risk is " + str( max_issue_risk_found ) +"].")
         sys.exit(1)
-
+        
     if (thresholds.fail_if_risk_over > 0 and output['overall_risk'] > thresholds.fail_if_risk_over):
         print ("Returning failure as fail_if_risk_over threshold has been exceeded [risk is " + str( output['overall_risk'] ) +"].")
         sys.exit(1)
-
+            
     if (thresholds.fail_if_issues_over > 0 and output['num_issues'] > thresholds.fail_if_issues_over):
         print ("Returning failure as fail_if_issues_over threshold has been exceeded [number of issues is " + str( output['num_issues'] ) +"].")
         sys.exit(1)
-
+        
     if (thresholds.fail_if_CVSS_over > 0 and max_cvss_found > thresholds.fail_if_CVSS_over):
         print ("Returning failure as fail_if_CVSS_over threshold has been exceeded [max CVSS found is " + str( max_cvss_found ) +"].")
         sys.exit(1)
 
 
 
-
-
-
+ 
+    
+    
 
 
 def run_app_stats(host, application_name, token, print_json, thresholds):
-
+       
     s = requests.Session()
 
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     GetApplicationsURL = host + "SecureDesigner/api/v1/applications/"
@@ -617,84 +685,84 @@ def run_app_stats(host, application_name, token, print_json, thresholds):
 
     version_infos = []
     application_id = ""
-
-
+    
+   
 
     for application in applications_info:
-
+        
         if 'name' in application:
-
+            
              if application['name'] == application_name:
-
+                                
                 application_id = application['id']
-
+                
 
                 # Now that we're in the right record for the application, for each version, retrieve the lists of reports
                 if 'versions' in application:
 
 
                     for version in application['versions']:
-
+                        
                         this_version_info = version_info()
-
+                        
                         if 'name' in version:
-
+                            
                             this_version_info.name = version['name']
                             this_version_info.id = version['id']
 
-
+                    
                             version_infos.append( this_version_info )
-
+        
     num_vulns = 0
     aggregate_risk = 0
     aggregate_issue_titles = []
-
-
+    
+    
     # iterate through versions
     for version in version_infos:
-
+        
         reports = get_reports_list(host, application_id, version.id, token, print_json)
-
+        
         latest_report_info = get_report_info(host, application_id, version.id, token, reports, -1, print_json)
 
         latest_report_issues = print_report_info(latest_report_info, "Latest", True)
-
+    
         for latest_iss in latest_report_issues:
             aggregate_risk = aggregate_risk + latest_iss.total_cost
-
+            
             #latest_report_titles.append(latest_iss.title)
-
+            
             num_vulns += 1
 
     if print_json:
         output = {}
         output['total_vulnerabilities'] = num_vulns
         output['aggregate_risk'] = aggregate_risk
-
+        
         print ( json.dumps(output, indent=4, sort_keys=True) )
     else:
         print("total num_vuls [" + str( num_vulns ) + "]")
         print("total aggregate_risk [" + str( aggregate_risk ) + "]")
 
-
+    
     # run thresholds
     if (thresholds.fail_if_risk_over > 0 and aggregate_risk > thresholds.fail_if_risk_over):
         print ("Returning failure as fail_if_risk_over threshold has been exceeded [application aggregate risk is " + str( aggregate_risk ) +"].")
         sys.exit(1)
-
+            
     if (thresholds.fail_if_issues_over > 0 and num_vulns > thresholds.fail_if_issues_over):
         print ("Returning failure as fail_if_issues_over threshold has been exceeded [application number of issues is " + str( num_vulns ) +"].")
         sys.exit(1)
-
-
-
-
-
-
+        
+    
+    
+    
+    
+    
 def run_compare_latest_results(host, application, version, token, print_json, thresholds):
 
     reports = get_reports_list(host, application, version, token, print_json)
-
+    
     if len(reports) < 2:
         print("Error, compare_latest_results called with less than 2 reports.  Unable to compare.")
         sys.exit(2)
@@ -733,7 +801,7 @@ def run_scan_blocking(host, application, version, token, print_json):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     #Build API URL
@@ -751,7 +819,7 @@ def run_scan_blocking(host, application, version, token, print_json):
         sys.exit(2)
 
     if StatusResponse.status_code != 200:
-
+        
         # If you kick off a scan for a version when one is already running, it'll return 400 with a body saying "Scan already running"
         if StatusResponse.status_code == 400 and StatusResponse.text == "Scan already running":
             if not print_json:
@@ -834,7 +902,7 @@ def run_scan(host, application, version, token, print_json):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
 
@@ -852,7 +920,7 @@ def run_scan(host, application, version, token, print_json):
         sys.exit(2)
 
     if StatusResponse.status_code != 200:
-
+        
         # If you kick off a scan for a version when one is already running, it'll return 400 with a body saying "Scan already running"
         if StatusResponse.status_code == 400 and StatusResponse.text == "Scan already running":
             if not print_json:
@@ -880,7 +948,7 @@ def get_reports_list(host, application, version, token, print_json):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
 
@@ -945,7 +1013,7 @@ def get_report_info(host, application, version, token, reports_dict, index, prin
 
     # Get the report id for the scan
     try:
-        latest_report_handle = reports_dict[index] #
+        latest_report_handle = reports_dict[index] # 
     except IndexError:
         print ("Error obtaining handle to report.  Are you examining a latest report without any reports existing?  Or are you attempting to compare reports have have less than two reports?")
         exit(2)
@@ -963,8 +1031,8 @@ def get_report_info(host, application, version, token, reports_dict, index, prin
 def get_latest_report_info(host, application, version, token, reports_dict, print_json):
 
     if not print_json:
-        print ("Getting information on this report")
-
+        print ("Getting information on this report") 
+        
     if len(reports_dict) < 1:
         print("Error: no reports found.")
         sys.exit(2)
@@ -1033,7 +1101,7 @@ def print_report_info(report_info, descriptor, print_json):
                 this_issue.CVSS_value = 0.0
                 this_issue.CVSS = "CVSS not set"
 
-
+            
 
         report_issues.append(this_issue)
 
@@ -1071,7 +1139,7 @@ def get_reports_dict(host, application, version, token, report):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     GetLatestReportsURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions/" + version + "/reports/" + report.id + "/vulnerabilities"
@@ -1103,7 +1171,7 @@ def get_reports_dict(host, application, version, token, report):
 
 
 
-
+    
 
 
 def compare_report_infos(latest_report_info, penultumate_report_info, print_json, thresholds):
@@ -1143,13 +1211,13 @@ def compare_report_infos(latest_report_info, penultumate_report_info, print_json
         reduced = previous_risk - latest_risk
         if not print_json:
             print ("\n    Risk level has REDUCED by       $" + str( f'{reduced:,}' ))
-
+        
         # About to calculate risk % changes, but be careful encase 'latest_risk' is 0
         if latest_risk == 0:
             reduced_percentage = 100
         else:
             reduced_percentage = ( 100 - ( 100 / previous_risk ) * latest_risk )
-
+            
         if not print_json:
             print ("    Risk level has REDUCED by       " + str( reduced_percentage )[0:4] + "%\n")
 
@@ -1161,13 +1229,13 @@ def compare_report_infos(latest_report_info, penultumate_report_info, print_json
         increased = latest_risk - previous_risk
         if not print_json:
             print ("\n    Risk level has INCREASED by    $" + str( f'{increased:,}' ))
-
+            
         # About to calculate risk % changes, but be careful encase 'previous_risk' was 0 and we get an exception
         try:
             increased_percentage = ( ( ( 100 / previous_risk  ) * latest_risk ) - 100)
         except ZeroDivisionError:
             increased_percentage = latest_risk * 100
-
+            
         if not print_json:
             print ("    Risk level has INCREASED by     " + str( increased_percentage )[0:4] + "%\n")
 
@@ -1215,7 +1283,7 @@ def compare_report_infos(latest_report_info, penultumate_report_info, print_json
     new_risk = 0
     max_cvss_found = 0.0
     max_issue_risk_found = 0
-
+    
     for latest_title in latest_report_titles:
 
         if latest_title in penultumate_report_titles:
@@ -1248,7 +1316,7 @@ def compare_report_infos(latest_report_info, penultumate_report_info, print_json
 
                     if i.CVSS_value > max_cvss_found:
                         max_cvss_found = i.CVSS_value
-
+                    
                     if i.total_cost > max_issue_risk_found:
                         max_issue_risk_found = i.total_cost
 
@@ -1284,23 +1352,23 @@ def compare_report_infos(latest_report_info, penultumate_report_info, print_json
     if (thresholds.fail_if_issue_risk_over > 0 and max_issue_risk_found > thresholds.fail_if_issue_risk_over):
         print ("Returning failure as fail_if_issue_risk_over threshold has been exceeded [risk is " + str( max_issue_risk_found ) +"].")
         sys.exit(1)
-
+        
     if (thresholds.fail_if_risk_over > 0 and latest_risk > thresholds.fail_if_risk_over):
         print ("Returning failure as fail_if_risk_over threshold has been exceeded [risk is " + str( latest_risk ) +"].")
         sys.exit(1)
-
+            
     if (thresholds.fail_if_issues_over > 0 and len(latest_report_issues) > thresholds.fail_if_issues_over):
         print ("Returning failure as fail_if_issues_over threshold has been exceeded [number of issues is " + str( len(latest_report_issues) ) +"].")
         sys.exit(1)
-
+        
     if (thresholds.fail_if_CVSS_over > 0 and max_cvss_found > thresholds.fail_if_CVSS_over):
         print ("Returning failure as fail_if_CVSS_over threshold has been exceeded [max CVSS found is " + str( max_cvss_found ) +"].")
         sys.exit(1)
-
+    
     if (thresholds.fail_if_risk_change_over > 0 and new_risk > thresholds.fail_if_risk_change_over):
         print ("Returning failure as fail_if_risk_change_over threshold has been exceeded [new risk found is " + str( new_risk ) +"].")
         sys.exit(1)
-
+    
     if (thresholds.fail_if_issues_change_over > 0 and len(new_issues) > thresholds.fail_if_issues_change_over):
         print ("Returning failure as fail_if_issues_change_over threshold has been exceeded [new issues found is " + str( len(new_issues) ) +"].")
         sys.exit(1)
@@ -1315,7 +1383,7 @@ def map_app_name_to_id(host, application_name, token, print_json):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     GetApplicationsURL = host + "SecureDesigner/api/v1/applications/"
@@ -1351,7 +1419,7 @@ def map_app_name_to_id(host, application_name, token, print_json):
                 application_id = application['id']
                 if not print_json:
                     print("Application ID found for [" + application_name +"]: " + application_id)
-
+                    
                 break
 
 
@@ -1373,7 +1441,7 @@ def map_app_name_and_version_to_ids(host, application_name, version_name, token,
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     GetApplicationsURL = host + "SecureDesigner/api/v1/applications/"
@@ -1455,7 +1523,7 @@ def run_map_app_name_to_id(host, application_name, token, print_json):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     GetApplicationsURL = host + "SecureDesigner/api/v1/applications/"
@@ -1518,7 +1586,7 @@ def run_check_for_existing_version(host, application_name, version_name, token, 
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     GetApplicationsURL = host + "SecureDesigner/api/v1/applications/"
@@ -1590,19 +1658,19 @@ def run_create_version_with_credentials(host, application, version_name, token, 
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     AddVersionURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions"
-
+    
     payload = '{"name":"' + version_name + '","forceCookies":false,"roles":[],"webPageList":[],"tools":[],"reports":[],"actions":[],"scmConfiguration":{"useUpload":false,"authenticationType":"USER_PASS","address":"' + sast_git + '","identity":"' + sast_username + '","secret":"' + sast_token + '"}}'
 
     payload_json = json.loads(payload)
-
+    
     payload_json['tools'] = tools_to_add
-
+    
     #print( "About to send " + json.dumps (payload_json))
-
+    
     try:
         StatusResponse = s.request("POST", AddVersionURL, json=payload_json)
     except requests.exceptions.RequestException as err:
@@ -1626,10 +1694,10 @@ def run_create_version_with_credentials(host, application, version_name, token, 
 
 
     version_id = ""
-
+    
     if 'id' in new_version_info:
         version_id = new_version_info['id']
-
+        
         if not print_json:
             print("New version created: name [" + version_name + "], id [" + version_id + "]")
 
@@ -1651,15 +1719,15 @@ def run_create_version(host, application, version_name, token, print_json, sast_
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     AddVersionURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions"
-
+    
     payload = '{"name":"' + version_name + '","forceCookies":false,"roles":[],"webPageList":[],"tools":[],"reports":[],"actions":[],"scmConfiguration":{"useUpload":false,"authenticationType":"UNAUTHENTICATED","address":"' + sast_git + '"}}'
 
     payload_json = json.loads(payload)
-
+    
     payload_json['tools'] = tools_to_add
 
     try:
@@ -1685,10 +1753,10 @@ def run_create_version(host, application, version_name, token, print_json, sast_
 
 
     version_id = ""
-
+    
     if 'id' in new_version_info:
         version_id = new_version_info['id']
-
+        
         if not print_json:
             print("New version created: name [" + version_name + "], id [" + version_id + "]")
 
@@ -1708,11 +1776,11 @@ def run_get_verison_info(host, application, version, token, print_json):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     GetVersionURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions/" + version
-
+    
 
     try:
         StatusResponse = s.request("Get", GetVersionURL)
@@ -1734,7 +1802,7 @@ def run_get_verison_info(host, application, version, token, print_json):
     except json.JSONDecodeError as jex:
         print ("Invalid JSON when adding new version.  Exception: [" + str(jex) + "]")
         sys.exit(2)
-
+        
     return version_info
 
 
@@ -1748,13 +1816,13 @@ def run_update_version(host, application, version, token, print_json, version_da
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     UpdateVersionURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions/" + version
-
+    
     payload_json = version_data
-
+    
     payload_json['tools'] = tools_to_add
 
     try:
@@ -1779,7 +1847,7 @@ def run_get_tools_details(host, token, print_json):
     s.headers.update({
         'Content-Type': "application/json",
         'cache-control': "no-cache",
-        'Authorization': "Bearer " + token
+        'Authorization': "" + token
         })
 
     GetToolsURL = host + "SecureDesigner/api/v1/tools"
@@ -1803,12 +1871,107 @@ def run_get_tools_details(host, token, print_json):
     except json.JSONDecodeError as jex:
         print ("Invalid JSON when getting tools.  Exception: [" + str(jex) + "]")
         sys.exit(2)
-
+        
     return tools_info
 
 
 
+def run_map_container_name_to_id(host, connection_name, token, print_json):
+
+    s = requests.Session()
+
+    s.headers.update({
+        'Content-Type': "application/json",
+        'cache-control': "no-cache",
+        'Authorization': "" + token
+        })
+
+    GetConnectionsURL = host + "SecureDesigner/api/v1/connections/"
+
+
+    try:
+        StatusResponse = s.request("Get", GetConnectionsURL)
+    except requests.exceptions.RequestException as err:
+        print ("Exception getting connections\n" + str(err))
+        sys.exit(2)
+
+    if StatusResponse.status_code != 200:
+        #Something went wrong, maybe server not up, maybe auth wrong
+        print("Non 200 status code returned when getting connections.  Code [" + str(StatusResponse.status_code) + "]")
+        sys.exit(2)
+
+
+    connections_info = {}
+
+
+    try:
+        connections_info = json.loads(StatusResponse.text)
+    except json.JSONDecodeError as jex:
+        print ("Invalid JSON when extracting connections.  Exception: [" + str(jex) + "]")
+        sys.exit(2)
+
+
+    connection_id = ""
+
+    for connection_config in connections_info:
+
+        if 'toolName' in connection_config:
+
+            if connection_config['toolName'] == connection_name:
+                #We have found the connection, record the GUID
+                connection_id = connection_config['id']
+                if not print_json:
+                    print("Connection ID found for [" + connection_name + "]: " + connection_id)
+
+
+    # check ""
+    if connection_id == "":
+        # we didn't find one of the ids, so return a failure
+        print("Failed to find id for connection name [" + connection_name + "], id [" + connection_id + "]")
+        sys.exit(2)
+
+    if not print_json:
+        print("Mapped connection name to id: connection name [" + connection_name + "], id [" + connection_id + "]")
+
+    return connection_id
+
+
+
+def run_update_container_config(host, application, version, container_image, container_tag, connection_id, token, print_json):
+
+    s = requests.Session()
+
+    s.headers.update({
+        'Content-Type': "application/json",
+        'cache-control': "no-cache",
+        'Authorization': "" + token
+        })
+
+    UpdateVersionContainerURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions/" + version + "/container-image"
+    
+    if connection_id == "null":
+        payload =  '{"name":"' + container_image + '","tag":"' + container_tag + '","connectionId":' + connection_id + '}'
+    else:
+        payload =  '{"name":"' + container_image + '","tag":"' + container_tag + '","connectionId":"' + connection_id + '"}'
+    
+    payload_json = json.loads(payload)
+    
+
+    try:
+        StatusResponse = s.request("PUT", UpdateVersionContainerURL, json=payload_json)
+    except requests.exceptions.RequestException as err:
+        print ("Exception updating version\n" + str(err))
+        sys.exit(2)
+
+    if StatusResponse.status_code != 200:
+        #Something went wrong, maybe server not up, maybe auth wrong
+        print("Non 200 status code returned when updating container config.  Code [" + str(StatusResponse.status_code) + "]")
+        sys.exit(2)
+
+    if not print_json:
+        print("Updated container configuration")
+    
+
 
 if __name__ == "__main__":
     _main()
-
