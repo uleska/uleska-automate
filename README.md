@@ -14,26 +14,31 @@ Uleska CLI for ease of integration with CI/CD and similar systems
                                  \|_________|                    
                                  
                                  
-usage: uleska-automate [-h] --uleska_host ULESKA_HOST --token TOKEN
-                       [--application_id APPLICATION_ID]
-                       [--version_id VERSION_ID]
-                       [--application_name APPLICATION_NAME]
-                       [--version_name VERSION_NAME] [--sast_pipeline]
-                       [--sast_git SAST_GIT] [--sast_username SAST_USERNAME]
-                       [--sast_token SAST_TOKEN] [--tools TOOLS] [--test]
-                       [--test_and_results] [--test_and_compare]
-                       [--latest_results] [--compare_latest_results]
-                       [--print_json] [--get_ids] [--app_stats]
-                       [--fail_if_issue_risk_over FAIL_IF_ISSUE_RISK_OVER]
-                       [--fail_if_risk_over FAIL_IF_RISK_OVER]
-                       [--fail_if_risk_change_over FAIL_IF_RISK_CHANGE_OVER]
-                       [--fail_if_issues_over FAIL_IF_ISSUES_OVER]
-                       [--fail_if_issues_change_over FAIL_IF_ISSUES_CHANGE_OVER]
-                       [--fail_if_CVSS_over FAIL_IF_CVSS_OVER] [--debug]
+usage: uleska-automate.py [-h] --uleska_host ULESKA_HOST --token TOKEN
+                          [--application_id APPLICATION_ID]
+                          [--version_id VERSION_ID]
+                          [--application_name APPLICATION_NAME]
+                          [--version_name VERSION_NAME] [--update_sast]
+                          [--sast_git SAST_GIT]
+                          [--sast_username SAST_USERNAME]
+                          [--sast_token SAST_TOKEN] [--tools TOOLS]
+                          [--update_container]
+                          [--container_image CONTAINER_IMAGE]
+                          [--container_tag CONTAINER_TAG]
+                          [--container_connection CONTAINER_CONNECTION]
+                          [--test] [--test_and_results] [--test_and_compare]
+                          [--latest_results] [--compare_latest_results]
+                          [--print_json] [--get_ids] [--app_stats]
+                          [--fail_if_issue_risk_over FAIL_IF_ISSUE_RISK_OVER]
+                          [--fail_if_risk_over FAIL_IF_RISK_OVER]
+                          [--fail_if_risk_change_over FAIL_IF_RISK_CHANGE_OVER]
+                          [--fail_if_issues_over FAIL_IF_ISSUES_OVER]
+                          [--fail_if_issues_change_over FAIL_IF_ISSUES_CHANGE_OVER]
+                          [--fail_if_CVSS_over FAIL_IF_CVSS_OVER] [--debug]
 
 Uleska command line interface. To identify the project/pipeline to test you
 can specify either --application_name and --version_name, or --application and
---version (passing GUIDs). (Version 0.2)
+--version (passing GUIDs). (Version 0.4)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -49,18 +54,30 @@ optional arguments:
                         Name for the application to reference
   --version_name VERSION_NAME
                         Name for the version/pipeline to reference
-  --sast_pipeline       Add or update a SAST pipeline. Requires an pre-
+  --update_sast         Add or update a SAST pipeline. Requires an pre-
                         existing application. See documentation for other
                         settings
-  --sast_git SAST_GIT   Git URL for SAST repo
+  --sast_git SAST_GIT   Git URL for SAST repo. Required with --update_sast.
   --sast_username SAST_USERNAME
                         If repo requires authentication, this is the username
-                        to use
+                        to use. Optional with --update_sast.
   --sast_token SAST_TOKEN
                         If repo requires authentication, this is the token
-                        value to use
-  --tools TOOLS         List of tool names to use for this version. Used with
-                        --sast_pipeline. Comma separated
+                        value to use. Optional with --update_sast.
+  --tools TOOLS         List of tool names to use for this version. Optional
+                        with --update_sast. Comma separated
+  --update_container    Update a container pipeline. Requires an pre-existing
+                        application/config. See documentation for other
+                        settings
+  --container_image CONTAINER_IMAGE
+                        Name of image to use. Required with
+                        --update_container.
+  --container_tag CONTAINER_TAG
+                        Tag to use. Required with --update_container.
+  --container_connection CONTAINER_CONNECTION
+                        Connection name to use for container access. Optional
+                        with --update_container. If not included Docker Hub is
+                        assumed.
   --test                Run tests only for the application and version
                         referenced, do not wait for the results
   --test_and_results    Run tests for the application and version referenced,
@@ -103,6 +120,7 @@ optional arguments:
                         'test_and_compare' or 'compare_latest_results'
                         function
   --debug               Prints debug messages
+
  ```
 
 
@@ -288,53 +306,136 @@ NEW ISSUE in this toolkit run:
 
 The Uleska CLI allows you to perform a number of functions as described below.  These functions will rely on a combination of parameters being passed.
 
-#### --uleska_host
+### API Interaction
 
-REQUIRED.  This is the hostname (or hostname and domainname as needed) of the Uleska Platform the CLI script is to invoke the testing or commands on.  For example, if you have the Uleska Platform installed at uleska.example.com, you would set this parameter to https://uleska.example.com/ .  Note the final forward slash is required.
+#### --uleska_host [hosturl]
 
-#### --token
+REQUIRED.  This is the hostname (or hostname and domainname as needed) of the Uleska Platform the CLI script is to invoke the testing or commands on.  For example, if you have the Uleska Platform installed at uleska.example.com, you would set this parameter to https://uleska.example.com/ .  Note the scheme, and the final forward slash are required.
 
-REQUIRED.  Provide the API authentication token retrieved for your chosen user.  See the relevant part of this documentation guide for more information on retrieving auth tokens from the Uleska Platform.
+#### --token [token]
 
-#### --application_name
+REQUIRED.  Provide the API authentication token retrieved for your chosen user.  See the relevant part of the Uleska documentation guide for more information on retrieving auth tokens from the Uleska Platform.
 
-The text name of the application descriptor in the Uleska Platform to be tested.  This must be an exact string match.  Note - if application_name or version_name are supplied to the CLI then any applicaiton_id or version_id supplied will be ignored.  You must supply a combination of application_name and application_version to identify the testing toolkit and set up to be tested.
+### Identifying the Application and Version to be tested
 
-#### --version_name
+#### --application_name [name]
 
-The text name of the version descriptor in the Uleska Platform to be tested.  This must be an exact string match.  Note - if application_name or version_name are supplied to the CLI then any applicaiton_id or version_id supplied will be ignored.  You must supply a combination of application_name and application_version to identify the testing toolkit and set up to be tested.
+The text name of the application descriptor in the Uleska Platform to be tested.  This must be an exact string match (case sensitive).  Note - if application_name or version_name are supplied to the CLI then any application_id or version_id supplied will be ignored.  You must supply a combination of application_name and application_version to identify the testing toolkit and set up to be tested.
 
-#### --applicaton_id
+#### --version_name [name]
+
+The text name of the version descriptor in the Uleska Platform to be tested.  This must be an exact string match (case sensitive).  Note - if application_name or version_name are supplied to the CLI then any applicaiton_id or version_id supplied will be ignored.  You must supply a combination of application_name and application_version to identify the testing toolkit and set up to be tested.
+
+#### --applicaton_id [id]
 
 The GUID associated with the application descriptor in the Uleska Platform.  This must be an exact string match.  The application ID can be retrieved using the 'get_ids' function of the CLI (see later), or can be viewed in the URL when accessing the application via the Uleska UI (after "/applications/").  Note - if application_name or version_name are supplied to the CLI then any applicaiton_id or version_id supplied will be ignored.
 
-#### --version_id
+#### --version_id [id]
 
 The GUID associated with the version descriptor in the Uleska Platform.  This must be an exact string match.  The version ID can be retrieved using the 'get_ids' function of the CLI (see later), or can be viewed in the URL when accessing the application via the Uleska UI (after "/versions/").  Note - if application_name or version_name are supplied to the CLI then any applicaiton_id or version_id supplied will be ignored.
 
-#### --debug
-
-Turns on debugging mode within the CLI script.  Nuf said.
+### Specifying the type of testing to be conducted
 
 #### --test
 
-Contacts the Uleska Platfom API and invokes the testing toolkit for the application and version specified.  Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  This starts the testing toolkit only, and does not block until the toolkit is finished, or process any results.  If your pipeline wants to start the testing in one place, and then check the results later, this is the function to use.
+Contacts the Uleska Platform API and invokes the testing toolkit for the application and version specified.  Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  This starts the testing toolkit only, and returns immediately - i.e. runs in NON-BLOCKING mode.  If your pipeline wants to start the testing in one place, and then check the results later, this is the function to use.
 
 #### --test_and_results
 
-Contacts the Uleska Platfom API and invokes the testing toolkit for the application and version specified, as well as blocking for the testing toolkit to complete, when it then retrieves the results.  Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  This will wait until the toolkit is finished, giving updates as it goes along.  When the toolkit has completed, it will retrieve the results of the latest report and display.  If your pipeline wants to start the testing and hold for the results of the latest test to be shown, then use this function.
+Contacts the Uleska Platform API and invokes the testing toolkit for the application and version specified, runs in BLOCKING mode, waiting for the testing toolkit to complete, when it then retrieves the results.  Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  This will wait until the toolkit is finished, giving updates as it goes along.  When the toolkit has completed, it will retrieve the results of the latest report and display (as text or JSON, depending on the --print_json flag).  If your pipeline wants to start the testing and hold for the results of the latest tests to be shown, then use this function. Note that any results returned will not have 'invalid issues' displayed or compared (e.g. issues marked as false positives, duplicates, or non-issues).
 
 #### --test_and_compare
 
-Contacts the Uleska Platfom API and invokes the testing toolkit for the application and version specified, as well as blocking for the testing toolkit to complete, when it then retrieves the latest results and compares those results to the previous results, highlighting any new or fixed issues.  Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  This will wait until the toolkit is finished, giving updates as it goes along.  When the toolkit has completed, it will retrieve the results of the latest report, as well as the previous report, and display the differences in risk and issues between those reports.  If you want to know 'what's changed' since the last run through the pipeline, this function will highlight new issues found since the last run, as well as issues fixed.  It'll also show the differences in numbers of issues and risk.  This means you can program automated logic around the testing in your pipeline, e.g. flagging the build or alerting something if the risk or number of issues goes above a specified value, or if issues of type X are found, or based on CVSS, etc.
+Contacts the Uleska Platform API and invokes the testing toolkit for the application and version specified, as well as blocking for the testing toolkit to complete, when it then retrieves the latest results and compares those results to the previous results, highlighting any new or fixed issues.  Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  Runs in BLOCKING mode until the toolkit is finished, giving updates as it goes along.  When the toolkit has completed, it will retrieve the results of the latest report, as well as the previous report, and display the differences in risk and issues between those reports (as text or JSON, depending on the --print_json flag).  If you want to know 'what's changed' since the last run through the pipeline, this function will highlight new issues found since the last run, as well as issues fixed.  It'll also show the differences in numbers of issues and risk.  This means you can program automated logic around the testing in your pipeline, e.g. flagging the build or alerting something if the risk or number of issues goes above a specified value, or if issues of type X are found, or based on CVSS, etc. Note that any results returned will not have 'invalid issues' displayed or compared (e.g. issues marked as false positives, duplicates, or non-issues).
 
 #### --latest_results
 
-Contacts the Uleska Platfom API and only retrieves the results of the latest scan for the application and version specified. Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  If your pipeline wants to start the testing somewhere else, and come back later for the results, this is the way to get those results in a non-blocking way.  This is the non-blocking equivalent of --test_and_results (only it doesn't kick off the tests).
+Contacts the Uleska Platform API and only retrieves the results of the latest scan for the application and version specified. Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  If your pipeline wants to start the testing somewhere else, and come back later for the results, this is the way to get those results in a NON-BLOCKING way.  This is the non-blocking equivalent of --test_and_results (only it doesn't kick off the tests). Note that any results returned will not have 'invalid issues' displayed or compared (e.g. issues marked as false positives, duplicates, or non-issues).
 
 #### --compare_latest_results
 
-Contacts the Uleska Platfom API for the latest, and previous results related to the application and version specified, when it then compares those results to the previous results, highlighting any new or fixed issues.   Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  If your pipeline wants to start the testing somewhere else, and come back later for the results to be compared to see what's changed since the last run, this is the way to get those results in a non-blocking way.  This is the non-blocking equivalent of --test_and_compare (only it doesn't kick off the tests).
+Contacts the Uleska Platform API for the latest, and previous results related to the application and version specified, when it then compares those results to the previous results, highlighting any new or fixed issues.   Requires a combination of application_name and version_name to be passed, or the application_id and version_id.  If your pipeline wants to start the testing somewhere else, and come back later for the results to be compared to see what's changed since the last run, this is the way to get those results in a non-blocking way.  This is the non-blocking equivalent of --test_and_compare (only it doesn't kick off the tests). Note that any results returned will not have 'invalid issues' displayed or compared (e.g. issues marked as false positives, duplicates, or non-issues).
+
+#### --app_stats
+
+Contacts the Uleska Platform API to return high level risk and vulnerability data for the entire application, not just specific versions/stages.
+
+
+### SAST Configuration updates
+
+#### --update_sast
+
+Flag to tell the CLI to expect configuration updates for SAST parameters, namely the Git Address, Git username, and/or Git auth token.  If this flag is set, at least --sast_git must be passed.  Note that the CLI SAST config updates can be used to update an existing SAST configuration for a version, it cannot be used to create a new version.
+
+#### --sast_git [gitaddress]
+
+Used in combination with --update_sast to update the Git Address configuration of the current application and version.  Value will be the full Git URL for the relevant codeline to be tested, e.g. "https://github.com/org/mycode.git".  This value will overwrite the existing Git Address configured for this version, equivalent to the 'Git Address' input in the UI.  Note setting this value automatically marks the 'Source Code Origin' flag to 'Git' for this version.
+
+#### --sast_username [username]
+
+Used in combination with --update_sast to update the Git Username configuration of the current application and version.  Value will be the username required to authenticate to the Git codeline to be tested. This value will overwrite the existing Git Username configured for this version, equivalent to the 'Username' input under 'SCM Authentication' in the UI.
+
+#### --sast_token [token]
+
+Used in combination with --update_sast to update the Git Password configuration of the current application and version.  Value will be the password or auth token required to authenticate to the Git codeline to be tested. This value will overwrite the existing Git Password configured for this version, equivalent to the 'Password' input under 'SCM Authentication' in the UI.
+
+#### --tools [tools]
+
+Used in combination with --update_sast to update the SAST toolkit of the current application and version.  Value will be a comma separated list of security tools configured for your testing.  This will overwite the existing toolkit configured.  For a list of tools configured for your environment, use the SecureDesigner/api/v1/tools API to list the tools and details (use the 'title' attribute as the tool name).  Example usage would be (--tools "Bandit,Dependency Checker,nodejs scan").
+
+
+### Container Configuration updates
+
+#### --update_container
+
+Flag to tell the CLI to expect configuration updates for container parameters, namely the container image name, container image tag, and possibly the container connection name. If this flag is set, at least --container_image and --container_tag must be passed.  Note that the CLI container config updates can be used to update an existing container configuration for a version, it cannot be used to create a new version.
+
+#### --container_image [name]
+
+Used in combination with --update_container to update the Container Name configuration of the current application and version.  This value will overwrite the existing Container Name configured for this version, equivalent to the 'Container Name' input under 'Container' tab in the UI.
+
+#### --container_tag [tag]
+
+Used in combination with --update_container to update the Container Tag configuration of the current application and version.  This value will overwrite the existing Container Tag configured for this version, equivalent to the 'Tag' input under 'Container' tab in the UI.
+
+#### --container_connection [connection]
+
+Used in combination with --update_container to update the Container Connection configuration of the current application and version.  This value will overwrite the existing Container Connection configured for this version, equivalent to the 'Connection' input under 'Container' tab in the UI.
+
+
+### Risk management
+
+#### --fail_if_issue_risk_over [risk]
+
+Usable with --test_and_results, --test_and_compare, --latest_results, --compare_latest_results.  Causes the CLI to return a failure (exit 1) if any individual issue in the results set returned has a risk value setting over the threshold set.  In the case of test commands that return the latest set of results (--test_and_results, --latest_results) this will cause a failure exit if any value in the latest result set is over the threshold.  In the case of test commands that compare the previous sets of results (--test_and_compare, --compare_latest_results) this will cause a failure exit if any value in the new issues found result set is over the threshold.
+
+
+#### --fail_if_risk_over [risk]
+
+Usable with --test_and_results, --test_and_compare, --latest_results, --compare_latest_results.  Causes the CLI to return a failure (exit 1) if the overall risk returned is over the threshold set.  In the case of test commands that return the latest set of results (--test_and_results, --latest_results) this will cause a failure exit if the risk of all issues in the latest result set is over the threshold.  In the case of test commands that compare the previous sets of results (--test_and_compare, --compare_latest_results) this will cause a failure exit if the combined risk of new issues found result set is over the threshold.
+
+
+#### --fail_if_risk_change_over [percentage]
+
+Usable with --test_and_compare, --compare_latest_results.  Causes the CLI to return a failure (exit 1) if the overall change in risk returned is over the percentage threshold set.  In the case of test commands that compare the previous sets of results (--test_and_compare, --compare_latest_results) this will cause a failure exit if the aggregate change in risk of new issues found result set is over the percentage threshold.
+
+
+#### --fail_if_issues_over [number]
+
+Usable with --test_and_results, --test_and_compare, --latest_results, --compare_latest_results.  Causes the CLI to return a failure (exit 1) if the overall number of issues returned is over the threshold set.  In the case of test commands that return the latest set of results (--test_and_results, --latest_results) this will cause a failure exit if the number of all issues in the latest result set is over the threshold.  In the case of test commands that compare the previous sets of results (--test_and_compare, --compare_latest_results) this will cause a failure exit if the number of new issues found result set is over the threshold.
+
+
+#### --fail_if_issues_change_over [percentage]
+
+Usable with --test_and_compare, --compare_latest_results.  Causes the CLI to return a failure (exit 1) if the overall change in numbers of issues returned is over the percentage threshold set.  In the case of test commands that compare the previous sets of results (--test_and_compare, --compare_latest_results) this will cause a failure exit if the aggregate change in numbers of new issues found result set is over the percentage threshold.
+
+
+#### --fail_if_CVSS_over [CVSS number]
+
+Usable with --test_and_results, --test_and_compare, --latest_results, --compare_latest_results.  Requires an integer number between 0 and 10.  Causes the CLI to return a failure (exit 1) if any individual issue in the results set returned has a CVSS value setting over the threshold set.  In the case of test commands that return the latest set of results (--test_and_results, --latest_results) this will cause a failure exit if any CVSS value in the latest result set is over the threshold.  In the case of test commands that compare the previous sets of results (--test_and_compare, --compare_latest_results) this will cause a failure exit if any CVSS value in the new issues found result set is over the threshold.
+
+
+### Other functions
 
 #### --print_json
 
@@ -342,8 +443,10 @@ Usable with --test_and_results, --test_and_compare, --latest_results, and --comp
 
 #### --get_ids
 
-Helper function that takes in the --application_name and --version_name and gives the GUIDs associated with each.  Helpful when you don't have access to the UI, or are just to lazy to log in.
+Helper function that takes in the --application_name and --version_name and gives the GUIDs associated with each.  Helpful when you don't have access to the UI, or are just to lazy to log in. 
 
-Note that any results returned will not have 'invalid issues' displayed or compared (e.g. issues marked as false positives, duplicates, or non-issues).
+#### --debug
+
+Turns on debugging mode within the CLI script.  Nuf said.
 
 For more details on the usage of the Uleska CLI, view the documentation at https://www.uleska.com
