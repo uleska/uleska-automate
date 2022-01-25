@@ -4,6 +4,12 @@ import argparse
 import time
 import sys
 
+from api.scan_api import scan_with_toolkit
+from api.toolkit_api import get_toolkits
+from api.uleska_api import UleskaApi
+from model.toolkit import Toolkit
+
+
 class issue_info:
     title = ""
     tool = ""
@@ -76,6 +82,8 @@ def _main():
     arg_options.add_argument('--fail_if_issues_over', help="Causes the CLI to return a failure if the number of issues is over the integer specified", type=str)
     arg_options.add_argument('--fail_if_issues_change_over', help="Causes the CLI to return a failure if the percentage change in new issues is over the integer specified.  Requires 'test_and_compare' or 'compare_latest_results' function", type=str)
     arg_options.add_argument('--fail_if_CVSS_over', help="Causes the CLI to return a failure if the any new issue has a CVSS over the integer specified.  Requires 'test_and_compare' or 'compare_latest_results' function", type=str)
+
+    arg_options.add_argument('--toolkit_name', help="The toolkit name of the toolkit you would like to scan", type=str)
 
     arg_options.add_argument('--debug', help="Prints debug messages", action="store_true")
 
@@ -500,8 +508,10 @@ def _main():
         run_test_and_compare(host, application, version, token, print_json, thresholds)
     elif test_and_results:
         run_test_and_results(host, application, version, token, print_json, thresholds)
-    elif test:
+    elif test and args.toolkit_name is None:
         run_scan(host, application, version, token, print_json)
+    elif test:
+        run_scan_with_toolkit(host, application, version, token, args.toolkit_name, print_json)
     elif latest_results:
         run_latest_results(host, application, version, token, print_json, thresholds)
     elif compare_latest_results:
@@ -1324,7 +1334,7 @@ def compare_report_infos(latest_report_info, penultumate_report_info, print_json
             json_issues_dict.append(json_issue)
 
 
-    if new_risk is not 0:
+    if new_risk != 0:
         if not print_json:
             print ("\n    New risk in this tookit run    = $" + str( f'{new_risk:,}'  ) )
 
@@ -1970,6 +1980,19 @@ def run_update_container_config(host, application, version, container_image, con
 
     if not print_json:
         print("Updated container configuration")
+
+
+
+def run_scan_with_toolkit(host: str, application: str, version: str, token: str, toolkit_name: str, print_json: bool):
+    toolkitsAndTools = get_toolkits(host, token)
+    for toolkitAndTools in toolkitsAndTools:
+        toolkit: Toolkit = toolkitAndTools.toolkit
+        if toolkit["name"] == toolkit_name:
+            toolkit_id = toolkit["id"]
+            if not print_json:
+                print("Toolkit Id found for [" + toolkit_name + "]: " + toolkit_id)
+    scan_with_toolkit(host, token, application, version, toolkit_id)
+    return "NOT IMPLEMENTED YET"
     
 
 
