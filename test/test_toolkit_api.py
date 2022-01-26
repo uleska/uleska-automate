@@ -23,15 +23,15 @@ class ToolkitApiTest(TestCase):
             'id' : toolkit_id,
             'name': toolkit_name,
             'description': toolkit_description,
-            'uleska_approved': True,
-            'customer_id': None
+            'uleskaApproved': True,
+            'customerId': None
             },
             'tools': []
         }]
         api = mock(spec=uleska_api.UleskaApi)
         response = mock(spec=requests.Response)
         when(uleska_api).get_api(any, any).thenReturn(api)
-        when(api).get('/SecureDesigner/api/v1/toolkits').thenReturn(response)
+        when(api).get('SecureDesigner/api/v1/toolkits').thenReturn(response)
         when(response).json().thenReturn(json)
 
         # when
@@ -58,8 +58,8 @@ class ToolkitApiTest(TestCase):
                 'id': toolkit_id_1,
                 'name': toolkit_name,
                 'description': toolkit_description,
-                'uleska_approved': True,
-                'customer_id': None
+                'uleskaApproved': True,
+                'customerId': None
             },
             'tools': []
         },
@@ -68,8 +68,8 @@ class ToolkitApiTest(TestCase):
                     'id': toolkit_id_2,
                     'name': toolkit_name,
                     'description': toolkit_description,
-                    'uleska_approved': True,
-                    'customer_id': None
+                    'uleskaApproved': True,
+                    'customerId': None
                 },
                 'tools': []
             }
@@ -77,7 +77,7 @@ class ToolkitApiTest(TestCase):
         api = mock(spec=uleska_api.UleskaApi)
         response = mock(spec=requests.Response)
         when(uleska_api).get_api(any, any).thenReturn(api)
-        when(api).get('/SecureDesigner/api/v1/toolkits').thenReturn(response)
+        when(api).get('SecureDesigner/api/v1/toolkits').thenReturn(response)
         when(response).json().thenReturn(json)
 
         # when

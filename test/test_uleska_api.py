@@ -8,6 +8,7 @@ from api.uleska_api import UleskaApi
 last_auth_header = None
 last_body = None
 
+
 class UleskaApiTest(TestCase):
 
     def test_get_works_with_correct_header(self):
@@ -37,7 +38,7 @@ class UleskaApiTest(TestCase):
             # when
             api = UleskaApi('http://localhost:9000', token)
 
-            api.post('/', {'hi':'world'})
+            api.post('/', {'hi': 'world'})
 
             # then
             self.assertEquals(expected_token, last_auth_header)
@@ -46,7 +47,7 @@ class UleskaApiTest(TestCase):
     def test_post_sends_correct_json(self):
         with HTTPServer(('localhost', 9000), TestWebServer) as web_server:
             threading.Thread(target=web_server.serve_forever, daemon=True).start()
-            json_data = {'some' : 'thing'}
+            json_data = {'some': 'thing'}
 
             # when
             api = UleskaApi('http://localhost:9000', 'fds')
@@ -62,6 +63,7 @@ class UleskaApiTest(TestCase):
         api2 = UleskaApi()
         self.assertEquals(api1, api2)
 
+
 class TestWebServer(BaseHTTPRequestHandler):
 
     def save_auth_header(self):
@@ -74,7 +76,6 @@ class TestWebServer(BaseHTTPRequestHandler):
         data_size = int(self.headers.get('Content-Length'))
         global last_body
         last_body = json.loads(self.rfile.read(data_size))
-
 
     def responed_with_ok(self):
         self.send_response(200)
