@@ -5,8 +5,7 @@ import time
 import sys
 
 from api.scan_api import scan_with_toolkit
-from api.toolkit_api import get_toolkits
-from model.toolkit import Toolkit
+from model.failure_thresholds import FailureThresholds
 from service.report import print_output_and_check_thresholds
 from service.scan import wait_for_scan_to_finish
 from service.toolkit import get_toolkit_id_from_name
@@ -28,15 +27,6 @@ class issue_info:
 class ids:
     application_id = ""
     version_id = ""
-
-
-class failure_thresholds:
-    fail_if_issue_risk_over = 0
-    fail_if_risk_over = 0
-    fail_if_risk_change_over = 0
-    fail_if_issues_over = 0
-    fail_if_issues_change_over = 0
-    fail_if_CVSS_over = 0
 
 
 class version_info:
@@ -125,8 +115,7 @@ def _main():
     arg_options.add_argument('--fail_if_CVSS_over',
                              help="Causes the CLI to return a failure if the any new issue has a CVSS over the integer specified.  Requires 'test_and_compare' or 'compare_latest_results' function",
                              type=str)
-
-    arg_options.add_argument('--toolkit_name', help="The toolkit name of the toolkit you would like to scan", type=str)
+    arg_options.add_argument('--toolkit_name', help="The name of the toolkit you would like to use to scan", type=str, default="")
 
     arg_options.add_argument('--debug', help="Prints debug messages", action="store_true")
 
@@ -159,7 +148,7 @@ def _main():
     container_tag = ""
     container_connection = ""
 
-    thresholds = failure_thresholds()
+    thresholds: FailureThresholds = FailureThresholds()
 
     application_name = ""
     version_name = ""
@@ -517,6 +506,10 @@ def _main():
         application = results.application_id
         version = results.version_id
 
+    toolkit_id = None
+    if args.toolkit_name != "":
+        toolkit_id = get_toolkit_id_from_name(host, token, args.toolkit_name, print_json)
+
     # Args retrieved, now decide what we're doing
     if get_ids:
         # No action as map_app_name_and_version_to_ids will have already returned the ids
@@ -526,13 +519,13 @@ def _main():
     elif test_and_compare:
         run_test_and_compare(host, application, version, token, print_json, thresholds)
     elif test_and_results:
-        run_blocking_scan_with_toolkit(host, application, version, token, args.toolkit_name, print_json, thresholds)
-    elif test_and_results and args.toolkit_name is None:
+        run_scan_with_toolkits_and_results(host, application, version, token, toolkit_id, print_json, thresholds)
+    elif test_and_results and toolkit_id is not None:
         run_test_and_results(host, application, version, token, print_json, thresholds)
-    elif test and args.toolkit_name is None:
+    elif test and toolkit_id is not None:
         run_scan(host, application, version, token, print_json)
     elif test:
-        run_scan_with_toolkit(host, application, version, token, args.toolkit_name, print_json)
+        scan_with_toolkit(host, application, version, token, toolkit_id)
     elif latest_results:
         run_latest_results(host, application, version, token, print_json, thresholds)
     elif compare_latest_results:
@@ -552,61 +545,7 @@ def run_test_and_results(host, application, version, token, print_json, threshol
 
     results = print_report_info(report_info, "Latest", print_json)
 
-    max_cvss_found = 0.0
-    max_issue_risk_found = 0
-
-    output = {}
-    results_to_print = []
-    overall_risk = 0
-
-    for i in results:
-
-        json_issue = {}
-        json_issue['title'] = i.title
-        json_issue['tool'] = i.tool
-        json_issue['risk'] = i.total_cost
-        json_issue['cvss'] = i.CVSS
-        json_issue['summary'] = i.summary
-        json_issue['severity'] = i.severity
-        json_issue['explanation'] = i.explanation
-        json_issue['recommendation'] = i.recommendation
-
-        if i.CVSS_value > max_cvss_found:
-            max_cvss_found = i.CVSS_value
-
-        if i.total_cost > max_issue_risk_found:
-            max_issue_risk_found = i.total_cost
-
-        overall_risk += i.total_cost
-
-        results_to_print.append(json_issue)
-
-    output['overall_risk'] = overall_risk
-    output['num_issues'] = len(results)
-    output['issues'] = results_to_print
-
-    if print_json:
-        print(json.dumps(output, indent=4, sort_keys=True))
-
-    if (thresholds.fail_if_issue_risk_over > 0 and max_issue_risk_found > thresholds.fail_if_issue_risk_over):
-        print("Returning failure as fail_if_issue_risk_over threshold has been exceeded [risk is " + str(
-            max_issue_risk_found) + "].")
-        sys.exit(1)
-
-    if (thresholds.fail_if_risk_over > 0 and output['overall_risk'] > thresholds.fail_if_risk_over):
-        print("Returning failure as fail_if_risk_over threshold has been exceeded [risk is " + str(
-            output['overall_risk']) + "].")
-        sys.exit(1)
-
-    if (thresholds.fail_if_issues_over > 0 and output['num_issues'] > thresholds.fail_if_issues_over):
-        print("Returning failure as fail_if_issues_over threshold has been exceeded [number of issues is " + str(
-            output['num_issues']) + "].")
-        sys.exit(1)
-
-    if (thresholds.fail_if_CVSS_over > 0 and max_cvss_found > thresholds.fail_if_CVSS_over):
-        print("Returning failure as fail_if_CVSS_over threshold has been exceeded [max CVSS found is " + str(
-            max_cvss_found) + "].")
-        sys.exit(1)
+    print_output_and_check_thresholds(results, print_json, thresholds)
 
 
 def run_latest_results(host, application, version, token, print_json, thresholds):
@@ -840,60 +779,7 @@ def run_scan_blocking(host, application, version, token, print_json):
     if not print_json:
         print("Scan running")
 
-    #### Scan should be running, run check scans to see if it's still running
-    scanfinished = False
-
-    CheckScanURL = host + "SecureDesigner/api/v1/scans"
-
-    while scanfinished is False:
-
-        try:
-            StatusResponse = s.request("Get", CheckScanURL)
-        except requests.exceptions.RequestException as err:
-            print("Exception checking for running scan\n" + str(err))
-            sys.exit(2)
-
-        if StatusResponse.status_code != 200:
-            # Something went wrong, maybe server not up, maybe auth wrong
-            print("Non 200 status code returned when checking for running scan.  Code [" + str(
-                StatusResponse.status_code) + "]")
-            sys.exit(2)
-
-        #### we have a response, check to see if this scan is still running.  Note there could be multiple scans running
-        running_scans_json = {}
-
-        try:
-            running_scans_json = json.loads(StatusResponse.text)
-        except json.JSONDecodeError as jex:
-            print("Invalid JSON when checking for running scans.  Exception: [" + str(jex) + "]")
-            sys.exit(2)
-
-        if len(running_scans_json) == 0:
-            #### if there's no scans running, then it must have finished
-            if not print_json:
-                print("No more scans running\n")
-            scanfinished = True
-            break
-
-        versions_running = []
-
-        for scan in running_scans_json:
-            if 'versionId' in scan:
-
-                versions_running.append(scan['versionId'])
-
-            else:
-                print("No versionId in the scan\n")
-
-        if version in versions_running:
-            if not print_json:
-                print("Our Toolkit " + version + " is still running, waiting...\n")
-            time.sleep(10)
-        else:
-            if not print_json:
-                print("Our Toolkit " + version + " has completed\n")
-            scanfinished = True
-            break
+    wait_for_scan_to_finish(version)
 
 
 # Runs a scan and moves on with it's life.
@@ -954,7 +840,7 @@ def get_reports_list(host, application, version, token, print_json):
     GetVersionReportsURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions/" + version
 
     try:
-        StatusResponse = s.request("Get", GetVersionReportsURL)
+        StatusResponse = s.request("Get", GetVersionReportsURL, verify=False)
     except requests.exceptions.RequestException as err:
         print("Exception getting version reports\n" + str(err))
         sys.exit(2)
@@ -1010,8 +896,6 @@ def get_report_info(host, application, version, token, reports_dict, index, prin
         print(
             "Error obtaining handle to report.  Are you examining a latest report without any reports existing?  Or are you attempting to compare reports have have less than two reports?")
         exit(2)
-
-    report_info = {}
 
     report_info = get_reports_dict(host, application, version, token, latest_report_handle)
 
@@ -1121,7 +1005,7 @@ def get_reports_dict(host, application, version, token, report):
     GetLatestReportsURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions/" + version + "/reports/" + report.id + "/vulnerabilities"
 
     try:
-        StatusResponse = s.request("Get", GetLatestReportsURL)
+        StatusResponse = s.request("Get", GetLatestReportsURL, verify=False)
     except requests.exceptions.RequestException as err:
         print("Exception getting latest reports\n" + str(err))
         sys.exit(2)
@@ -1880,20 +1764,14 @@ def run_update_container_config(host, application, version, container_image, con
         print("Updated container configuration")
 
 
-def run_scan_with_toolkit(host: str, application: str, version: str, token: str, toolkit_name: str, print_json: bool):
-    toolkit_id: str = get_toolkit_id_from_name(host, token, toolkit_name, print_json)
-    return scan_with_toolkit(host, token, application, version, toolkit_id)
-
-
-def run_blocking_scan_with_toolkit(host: str, application: str, version: str, token: str, toolkit_name: str, print_json: bool, thresholds):
-    toolkit_id: str = get_toolkit_id_from_name(host, token, toolkit_name, print_json)
+def run_scan_with_toolkits_and_results(host: str, application: str, version: str, token: str, toolkit_id: str,
+                                       print_json: bool, thresholds: FailureThresholds):
     scan_with_toolkit(host, token, application, version, toolkit_id)
     wait_for_scan_to_finish(host, token, print_json, version)
     reports = get_reports_list(host, application, version, token, print_json)
     report_info = get_report_info(host, application, version, token, reports, -1, print_json)
     results = print_report_info(report_info, "Latest", print_json)
-    print_output_and_check_thresholds(results, thresholds)
-
+    print_output_and_check_thresholds(results, print_json, thresholds)
 
 
 if __name__ == "__main__":
