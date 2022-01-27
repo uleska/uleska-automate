@@ -525,7 +525,7 @@ def _main():
             run_test_and_results(host, application, version, token, print_json, thresholds)
     elif test:
         if toolkit_id is not None:
-            scan_with_toolkit(host, application, version, token, toolkit_id)
+            scan_with_toolkit(host, token, application, version, toolkit_id)
         else:
             run_scan(host, application, version, token, print_json)
     elif latest_results:
@@ -842,7 +842,7 @@ def get_reports_list(host, application, version, token, print_json):
     GetVersionReportsURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions/" + version
 
     try:
-        StatusResponse = s.request("Get", GetVersionReportsURL, verify=False)
+        StatusResponse = s.request("Get", GetVersionReportsURL)
     except requests.exceptions.RequestException as err:
         print("Exception getting version reports\n" + str(err))
         sys.exit(2)
@@ -1007,7 +1007,7 @@ def get_reports_dict(host, application, version, token, report):
     GetLatestReportsURL = host + "SecureDesigner/api/v1/applications/" + application + "/versions/" + version + "/reports/" + report.id + "/vulnerabilities"
 
     try:
-        StatusResponse = s.request("Get", GetLatestReportsURL, verify=False)
+        StatusResponse = s.request("Get", GetLatestReportsURL)
     except requests.exceptions.RequestException as err:
         print("Exception getting latest reports\n" + str(err))
         sys.exit(2)

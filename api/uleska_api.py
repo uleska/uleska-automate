@@ -29,7 +29,7 @@ class UleskaApi:
         __instance = self
 
     def get(self, path: str) -> requests.Response:
-        response = self.session.get(self.host + path, verify=False)
+        response = self.session.get(self.host + path)
         response.raise_for_status()
         return response
 
