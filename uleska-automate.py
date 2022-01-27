@@ -519,13 +519,15 @@ def _main():
     elif test_and_compare:
         run_test_and_compare(host, application, version, token, print_json, thresholds)
     elif test_and_results:
-        run_scan_with_toolkits_and_results(host, application, version, token, toolkit_id, print_json, thresholds)
-    elif test_and_results and toolkit_id is not None:
-        run_test_and_results(host, application, version, token, print_json, thresholds)
-    elif test and toolkit_id is not None:
-        run_scan(host, application, version, token, print_json)
+        if toolkit_id is not None:
+            run_scan_with_toolkits_and_results(host, application, version, token, toolkit_id, print_json, thresholds)
+        else:
+            run_test_and_results(host, application, version, token, print_json, thresholds)
     elif test:
-        scan_with_toolkit(host, application, version, token, toolkit_id)
+        if toolkit_id is not None:
+            scan_with_toolkit(host, application, version, token, toolkit_id)
+        else:
+            run_scan(host, application, version, token, print_json)
     elif latest_results:
         run_latest_results(host, application, version, token, print_json, thresholds)
     elif compare_latest_results:
