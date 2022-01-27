@@ -55,4 +55,4 @@ class ScanTest(TestCase):
             wait_for_scan_to_finish('host', 'token', False, version_id)
 
         # then
-        self.assertEquals(cm.exception.code, 2)
+        self.assertEqual(cm.exception.code, 2)

@@ -25,7 +25,7 @@ class UleskaApiTest(TestCase):
             api.get('/')
 
             # then
-            self.assertEquals(expected_token, last_auth_header)
+            self.assertEqual(expected_token, last_auth_header)
             web_server.shutdown()
 
     def test_post_works_with_correct_header(self):
@@ -41,7 +41,7 @@ class UleskaApiTest(TestCase):
             api.post('/', {'hi': 'world'})
 
             # then
-            self.assertEquals(expected_token, last_auth_header)
+            self.assertEqual(expected_token, last_auth_header)
             web_server.shutdown()
 
     def test_post_sends_correct_json(self):
@@ -55,13 +55,13 @@ class UleskaApiTest(TestCase):
             api.post('/', json_data)
 
             # then
-            self.assertEquals(json_data, last_body)
+            self.assertEqual(json_data, last_body)
             web_server.shutdown()
 
     def test_is_singleton(self):
         api1 = UleskaApi('some address', 'some token')
         api2 = UleskaApi()
-        self.assertEquals(api1, api2)
+        self.assertEqual(api1, api2)
 
 
 class TestWebServer(BaseHTTPRequestHandler):

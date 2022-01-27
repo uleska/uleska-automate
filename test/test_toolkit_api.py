@@ -39,8 +39,8 @@ class ToolkitApiTest(TestCase):
 
         # then
         self.assertTrue(len(results) == 1)
-        self.assertEquals(expected_toolkit, results[0].toolkit)
-        self.assertEquals(expected_tools, results[0].tools)
+        self.assertEqual(expected_toolkit, results[0].toolkit)
+        self.assertEqual(expected_tools, results[0].tools)
 
 
     def test_get_toolkits_returns_multiple_toolkits_and_tools(self):
@@ -85,7 +85,7 @@ class ToolkitApiTest(TestCase):
 
         # then
         self.assertTrue(len(results) == 2)
-        self.assertEquals(expected_toolkit_1, results[0].toolkit)
-        self.assertEquals(expected_toolkit_2, results[1].toolkit)
-        self.assertEquals(expected_tools, results[0].tools)
-        self.assertEquals(expected_tools, results[1].tools)
+        self.assertEqual(expected_toolkit_1, results[0].toolkit)
+        self.assertEqual(expected_toolkit_2, results[1].toolkit)
+        self.assertEqual(expected_tools, results[0].tools)
+        self.assertEqual(expected_tools, results[1].tools)

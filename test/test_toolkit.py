@@ -35,7 +35,7 @@ class ToolkitTest(TestCase):
         result: str = get_toolkit_id_from_name('host', 'token', toolkit_name, False)
 
         # then
-        self.assertEquals(toolkit_id, result)
+        self.assertEqual(toolkit_id, result)
 
 
     def test_get_toolkit_id_from_name_throws_value_error_if_no_match(self):

@@ -455,3 +455,8 @@ Helper function that takes in the --application_name and --version_name and give
 Turns on debugging mode within the CLI script.  Nuf said.
 
 For more details on the usage of the Uleska CLI, view the documentation at https://www.uleska.com
+
+
+# Testing
+
+To run tests, please run `python3 -m unittest`

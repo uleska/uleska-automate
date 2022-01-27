@@ -25,4 +25,4 @@ class ScanApiTest(TestCase):
         result = scan_with_toolkit('host', 'token', application_id, version_id, toolkit_id)
 
         # then
-        self.assertEquals(response, result)
+        self.assertEqual(response, result)

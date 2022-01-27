@@ -46,7 +46,7 @@ class ReportTest(TestCase):
             check_thresholds(output, thresholds, 0, 0)
 
         # then
-        self.assertEquals(cm.exception.code, 1)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_check_threshold_does_not_exit_if_issue_risk_over_is_below_thresholds(self):
         # given
@@ -76,7 +76,7 @@ class ReportTest(TestCase):
             check_thresholds(output, thresholds, 2, 0)
 
         # then
-        self.assertEquals(cm.exception.code, 1)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_check_threshold_does_not_exit_if_issues_over_is_below_thresholds(self):
         # given
@@ -106,7 +106,7 @@ class ReportTest(TestCase):
             check_thresholds(output, thresholds, 0, 0)
 
         # then
-        self.assertEquals(cm.exception.code, 1)
+        self.assertEqual(cm.exception.code, 1)
 
     def test_check_threshold_does_not_exit_if_max_cvss_over_is_below_thresholds(self):
         # given
@@ -136,4 +136,4 @@ class ReportTest(TestCase):
             check_thresholds(output, thresholds, 0, 2)
 
         # then
-        self.assertEquals(cm.exception.code, 1)
+        self.assertEqual(cm.exception.code, 1)
