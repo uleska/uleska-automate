@@ -8,12 +8,11 @@ from api.scan_api import get_scans
 
 
 def wait_for_scan_to_finish(host: str, token: str, print_json: bool, version: str) -> None:
-    #### Scan should be running, run check scans to see if it's still running
     scan_finished: bool = False
     while scan_finished is False:
 
         status_response: requests.Response = get_scans(host, token)
-        #### we have a response, check to see if this scan is still running.  Note there could be multiple scans running
+        # We have a response, check to see if this scan is still running.  Note there could be multiple scans running
         try:
             running_scans_json = json.loads(status_response.text)
         except json.JSONDecodeError as jex:
@@ -21,7 +20,7 @@ def wait_for_scan_to_finish(host: str, token: str, print_json: bool, version: st
             sys.exit(2)
 
         if len(running_scans_json) == 0:
-            #### if there's no scans running, then it must have finished
+            # If there's no scans running, then it must have finished
             if not print_json:
                 print("No more scans running\n")
             scan_finished = True

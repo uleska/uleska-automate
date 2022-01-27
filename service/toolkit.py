@@ -1,10 +1,11 @@
 from api.toolkit_api import get_toolkits
 from model.toolkit import Toolkit
+from model.toolkit_and_tools import ToolkitAndTools
 
 
 def get_toolkit_id_from_name(host: str, token: str, toolkit_name: str, print_json: bool) -> str:
-    toolkit_id = None
-    toolkits_and_tools = get_toolkits(host, token)
+    toolkit_id: str = None
+    toolkits_and_tools: [ToolkitAndTools] = get_toolkits(host, token)
     for toolkit_and_tools in toolkits_and_tools:
         toolkit: Toolkit = toolkit_and_tools.toolkit
         if toolkit["name"] == toolkit_name:
