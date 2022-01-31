@@ -10,9 +10,5 @@ def get_toolkits(host: str, token: str) -> [ToolkitAndTools]:
     api: UleskaApi = uleska_api.get_api(host, token)
     url: str = 'SecureDesigner/api/v1/toolkits'
     response: requests.Response = api.get(url)
-    toolkits_and_tools: [ToolkitAndTools] = []
-    for toolkit_and_tool in response.json():
-        toolkit: Toolkit = Toolkit(**toolkit_and_tool["toolkit"])
-        toolkits_and_tools.append(ToolkitAndTools(toolkit, toolkit_and_tool["tools"]))
-    return toolkits_and_tools
-
+    return [ToolkitAndTools(Toolkit(**toolkit_and_tool["toolkit"]), toolkit_and_tool["tools"])
+            for toolkit_and_tool in response.json()]

@@ -22,7 +22,7 @@ def wait_for_scan_to_finish(host: str, token: str, print_json: bool, version: st
         if len(running_scans_json) == 0:
             # If there's no scans running, then it must have finished
             if not print_json:
-                print("No more scans running\n")
+                print("No more scans running")
             scan_finished = True
             break
 
@@ -36,10 +36,10 @@ def wait_for_scan_to_finish(host: str, token: str, print_json: bool, version: st
 
         if version in versions_running:
             if not print_json:
-                print("Scan for version " + version + " is still running, waiting...\n")
+                print("Scan for version " + version + " is still running, waiting...")
             time.sleep(10)
         else:
             if not print_json:
-                print("Scan for version " + version + " has completed\n")
+                print("Scan for version " + version + " has completed")
             scan_finished = True
             break

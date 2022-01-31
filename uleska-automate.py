@@ -545,9 +545,9 @@ def run_test_and_results(host, application, version, token, print_json, threshol
 
     report_info = get_report_info(host, application, version, token, reports, -1, print_json)
 
-    results = print_report_info(report_info, "Latest", print_json)
+    report_issues = build_and_print_report_issues(report_info, "Latest", print_json)
 
-    print_output_and_check_thresholds(results, print_json, thresholds)
+    print_output_and_check_thresholds(report_issues, print_json, thresholds)
 
 
 def run_latest_results(host, application, version, token, print_json, thresholds):
@@ -555,7 +555,7 @@ def run_latest_results(host, application, version, token, print_json, thresholds
 
     report_info = get_report_info(host, application, version, token, reports, -1, print_json)
 
-    results = print_report_info(report_info, "Latest", print_json)
+    results = build_and_print_report_issues(report_info, "Latest", print_json)
 
     max_cvss_found = 0.0
     max_issue_risk_found = 0
@@ -680,7 +680,7 @@ def run_app_stats(host, application_name, token, print_json, thresholds):
 
         latest_report_info = get_report_info(host, application_id, version.id, token, reports, -1, print_json)
 
-        latest_report_issues = print_report_info(latest_report_info, "Latest", True)
+        latest_report_issues = build_and_print_report_issues(latest_report_info, "Latest", True)
 
         for latest_iss in latest_report_issues:
             aggregate_risk = aggregate_risk + latest_iss.total_cost
@@ -924,7 +924,7 @@ def get_latest_report_info(host, application, version, token, reports_dict, prin
     return report_info
 
 
-def print_report_info(report_info, descriptor, print_json):
+def build_and_print_report_issues(report_info, descriptor, print_json):
     if not print_json:
         print("\n=== Listing issues in " + descriptor + " report =======================")
 
@@ -1033,9 +1033,9 @@ def compare_report_infos(latest_report_info, penultumate_report_info, print_json
     if not print_json:
         print("Comparing the latest scan report with the previous one")
 
-    latest_report_issues = print_report_info(latest_report_info, "Latest",
-                                             print_json)  # Pass false for 'json' as we want to print compare json, not each report
-    previous_report_issues = print_report_info(penultumate_report_info, "Previous", print_json)
+    latest_report_issues = build_and_print_report_issues(latest_report_info, "Latest",
+                                                         print_json)  # Pass false for 'json' as we want to print compare json, not each report
+    previous_report_issues = build_and_print_report_issues(penultumate_report_info, "Previous", print_json)
 
     latest_risk = 0
     previous_risk = 0
@@ -1772,8 +1772,8 @@ def run_scan_with_toolkits_and_results(host: str, application: str, version: str
     wait_for_scan_to_finish(host, token, print_json, version)
     reports = get_reports_list(host, application, version, token, print_json)
     report_info = get_report_info(host, application, version, token, reports, -1, print_json)
-    results = print_report_info(report_info, "Latest", print_json)
-    print_output_and_check_thresholds(results, print_json, thresholds)
+    report_issues = build_and_print_report_issues(report_info, "Latest", print_json)
+    print_output_and_check_thresholds(report_issues, print_json, thresholds)
 
 
 if __name__ == "__main__":
