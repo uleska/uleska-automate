@@ -77,16 +77,16 @@ class TestWebServer(BaseHTTPRequestHandler):
         global last_body
         last_body = json.loads(self.rfile.read(data_size))
 
-    def responed_with_ok(self):
+    def respond_with_ok(self):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(bytes('ok', 'utf-8'))
 
     def do_GET(self):
         self.save_auth_header()
-        self.responed_with_ok()
+        self.respond_with_ok()
 
     def do_POST(self):
         self.save_auth_header()
         self.save_body()
-        self.responed_with_ok()
+        self.respond_with_ok()
