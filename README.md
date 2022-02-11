@@ -119,6 +119,7 @@ optional arguments:
                         issue has a CVSS over the integer specified. Requires
                         'test_and_compare' or 'compare_latest_results'
                         function
+  --toolkit_name        The name of the toolkit you would like to use as part of your scan                      
   --debug               Prints debug messages
 
  ```
@@ -334,6 +335,10 @@ The GUID associated with the application descriptor in the Uleska Platform.  Thi
 
 The GUID associated with the version descriptor in the Uleska Platform.  This must be an exact string match.  The version ID can be retrieved using the 'get_ids' function of the CLI (see later), or can be viewed in the URL when accessing the application via the Uleska UI (after "/versions/").  Note - if application_name or version_name are supplied to the CLI then any applicaiton_id or version_id supplied will be ignored.
 
+#### --toolkit_name [name]
+
+The name of the Toolkit you would like to use in your scan e.g. 'Uleska Code Scan'.  This must be an exact string match (case sensitive).
+
 ### Specifying the type of testing to be conducted
 
 #### --test
@@ -450,3 +455,8 @@ Helper function that takes in the --application_name and --version_name and give
 Turns on debugging mode within the CLI script.  Nuf said.
 
 For more details on the usage of the Uleska CLI, view the documentation at https://www.uleska.com
+
+
+# Testing
+
+To run tests, please run `python3 -m unittest`
