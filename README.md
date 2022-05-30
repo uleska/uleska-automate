@@ -21,7 +21,7 @@ usage: uleska-automate.py [-h] --uleska_host ULESKA_HOST --token TOKEN
                           [--version_name VERSION_NAME] [--update_sast]
                           [--sast_git SAST_GIT]
                           [--sast_username SAST_USERNAME]
-                          [--sast_token SAST_TOKEN] [--tools TOOLS]
+                          [--sast_token SAST_TOKEN]
                           [--update_container]
                           [--container_image CONTAINER_IMAGE]
                           [--container_tag CONTAINER_TAG]
@@ -38,7 +38,7 @@ usage: uleska-automate.py [-h] --uleska_host ULESKA_HOST --token TOKEN
 
 Uleska command line interface. To identify the project/pipeline to test you
 can specify either --application_name and --version_name, or --application and
---version (passing GUIDs). (Version 0.4)
+--version (passing GUIDs). (Version 0.7)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -64,8 +64,6 @@ optional arguments:
   --sast_token SAST_TOKEN
                         If repo requires authentication, this is the token
                         value to use. Optional with --update_sast.
-  --tools TOOLS         List of tool names to use for this version. Optional
-                        with --update_sast. Comma separated
   --update_container    Update a container pipeline. Requires an pre-existing
                         application/config. See documentation for other
                         settings
