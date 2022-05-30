@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import requests
 import json
 import argparse
@@ -40,7 +42,7 @@ def _main():
 
     # Capture command line arguments
     arg_options = argparse.ArgumentParser(
-        description="Uleska command line interface. To identify the project/pipeline to test you can specify either --application_name and --version_name, or --application and --version (passing GUIDs). (Version 0.2)", )
+        description="Uleska command line interface. To identify the project/pipeline to test you can specify either --application_name and --version_name, or --application and --version (passing GUIDs). (Version 0.7)", )
     arg_options.add_argument('--uleska_host',
                              help="URL to the Uleska host (e.g. https://s1.uleska.com/) (note final / is required)",
                              required=True, type=str)
@@ -50,6 +52,7 @@ def _main():
     arg_options.add_argument('--version_id', help="GUID for the application version/pipeline to reference", type=str)
     arg_options.add_argument('--application_name', help="Name for the application to reference", type=str)
     arg_options.add_argument('--version_name', help="Name for the version/pipeline to reference", type=str)
+    arg_options.add_argument('--toolkit_name', help="The name of the toolkit you would like to use to scan.  Note: for backwards compatibility you can call the CLI without this argument, but this will be depreciated in the future.", type=str, default="")
 
     arg_options.add_argument('--update_sast',
                              help="Add or update a SAST pipeline.  Requires an pre-existing application. See documentation for other settings",
@@ -63,7 +66,7 @@ def _main():
                              type=str)
 
     arg_options.add_argument('--tools',
-                             help="List of tool names to use for this version.  Optional with --update_sast.  Comma separated",
+                             help="List of tool names to use for this version.  Optional with --update_sast.  Comma separated.  Note this option is now depreciated.",
                              type=str)
 
     arg_options.add_argument('--update_container',
@@ -115,7 +118,6 @@ def _main():
     arg_options.add_argument('--fail_if_CVSS_over',
                              help="Causes the CLI to return a failure if the any new issue has a CVSS over the integer specified.  Requires 'test_and_compare' or 'compare_latest_results' function",
                              type=str)
-    arg_options.add_argument('--toolkit_name', help="The name of the toolkit you would like to use to scan", type=str, default="")
 
     arg_options.add_argument('--debug', help="Prints debug messages", action="store_true")
 
@@ -162,7 +164,15 @@ def _main():
 
     # Grab the host from the command line arguments
     if args.uleska_host is not None:
-        host = args.uleska_host
+        host_tmp = args.uleska_host
+        
+        # Make sure last character of host is "/"
+        host_striped = host_tmp.strip()
+        
+        if host_striped[-1] != '/':
+            host = host_striped + '/'
+        else:
+            host = host_striped
 
         if debug:
             print("Host: " + host)
@@ -517,7 +527,10 @@ def _main():
     elif app_stats:
         run_app_stats(host, application_name, token, print_json, thresholds)
     elif test_and_compare:
-        run_test_and_compare(host, application, version, token, print_json, thresholds)
+        if toolkit_id is not None:
+            run_scan_with_toolkits_and_compare(host, application, version, token, toolkit_id, print_json, thresholds)
+        else:
+            run_test_and_compare(host, application, version, token, print_json, thresholds)
     elif test_and_results:
         if toolkit_id is not None:
             run_scan_with_toolkits_and_results(host, application, version, token, toolkit_id, print_json, thresholds)
@@ -781,7 +794,8 @@ def run_scan_blocking(host, application, version, token, print_json):
     if not print_json:
         print("Scan running")
 
-    wait_for_scan_to_finish(version)
+    #wait_for_scan_to_finish(version)
+    wait_for_scan_to_finish(host, token, print_json, version)
 
 
 # Runs a scan and moves on with it's life.
@@ -1033,9 +1047,8 @@ def compare_report_infos(latest_report_info, penultumate_report_info, print_json
     if not print_json:
         print("Comparing the latest scan report with the previous one")
 
-    latest_report_issues = build_and_print_report_issues(latest_report_info, "Latest",
-                                                         print_json)  # Pass false for 'json' as we want to print compare json, not each report
-    previous_report_issues = build_and_print_report_issues(penultumate_report_info, "Previous", print_json)
+    latest_report_issues = build_and_print_report_issues(latest_report_info, "Latest", True)  
+    previous_report_issues = build_and_print_report_issues(penultumate_report_info, "Previous", True)
 
     latest_risk = 0
     previous_risk = 0
@@ -1062,6 +1075,7 @@ def compare_report_infos(latest_report_info, penultumate_report_info, print_json
         results['risk_decrease_percentage'] = 0
     elif previous_risk > latest_risk:
         reduced = previous_risk - latest_risk
+
         if not print_json:
             print("\n    Risk level has REDUCED by       $" + str(f'{reduced:,}'))
 
@@ -1774,6 +1788,15 @@ def run_scan_with_toolkits_and_results(host: str, application: str, version: str
     report_info = get_report_info(host, application, version, token, reports, -1, print_json)
     report_issues = build_and_print_report_issues(report_info, "Latest", print_json)
     print_output_and_check_thresholds(report_issues, print_json, thresholds)
+
+def run_scan_with_toolkits_and_compare(host: str, application: str, version: str, token: str, toolkit_id: str,
+                                       print_json: bool, thresholds: FailureThresholds):
+    scan_with_toolkit(host, token, application, version, toolkit_id)
+    wait_for_scan_to_finish(host, token, print_json, version)
+    reports = get_reports_list(host, application, version, token, print_json)
+    latest_report_info = get_report_info(host, application, version, token, reports, -1, print_json)
+    penultumate_report_info = get_report_info(host, application, version, token, reports, -2, print_json)
+    compare_report_infos(latest_report_info, penultumate_report_info, print_json, thresholds)
 
 
 if __name__ == "__main__":
