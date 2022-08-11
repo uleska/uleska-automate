@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import requests
 import json
 import argparse
@@ -660,27 +658,32 @@ def run_app_stats(host, application_name, token, print_json, thresholds):
 
     version_infos = []
     application_id = ""
+    
+    results: list = []
+    results.append(applications_info)
+    
+    for content in results:
 
-    for application in applications_info:
-
-        if 'name' in application:
-
-            if application['name'] == application_name:
-
-                application_id = application['id']
-
-                # Now that we're in the right record for the application, for each version, retrieve the lists of reports
-                if 'versions' in application:
-
-                    for version in application['versions']:
-
-                        this_version_info = version_info()
-
-                        if 'name' in version:
-                            this_version_info.name = version['name']
-                            this_version_info.id = version['id']
-
-                            version_infos.append(this_version_info)
+        for application in content['content']:
+    
+            if 'name' in application:
+    
+                if application['name'] == application_name:
+    
+                    application_id = application['id']
+    
+                    # Now that we're in the right record for the application, for each version, retrieve the lists of reports
+                    if 'versions' in application:
+    
+                        for version in application['versions']:
+    
+                            this_version_info = version_info()
+    
+                            if 'name' in version:
+                                this_version_info.name = version['name']
+                                this_version_info.id = version['id']
+    
+                                version_infos.append(this_version_info)
 
     num_vulns = 0
     aggregate_risk = 0
@@ -994,10 +997,12 @@ def build_and_print_report_issues(report_info, descriptor, print_json):
     for iss in report_issues:
         if not print_json:
             print("\nIssue [" + iss.title + "] from tool [" + iss.tool + "]")
-            print("Resource affected [" + iss.affectedURL + "]")
-            print("Summary [" + iss.summary + "]")
-            print("CVSS [" + iss.CVSS + "]")
-            print("Cost [$" + str(f'{iss.total_cost:,}') + "]\n")
+            print(" - Resource affected [" + iss.affectedURL + "]")
+            print(" - Summary [" + iss.summary + "]")
+            print(" - Detail [" + iss.explanation + "]")
+            print(" - Recommendation [" + iss.recommendation + "]")
+            print(" - CVSS [" + iss.CVSS + "]")
+            print(" - Risk [$" + str(f'{iss.total_cost:,}') + "]\n")
         total_risk = total_risk + iss.total_cost
 
     if not print_json:
@@ -1273,18 +1278,23 @@ def map_app_name_to_id(host, application_name, token, print_json):
         sys.exit(2)
 
     application_id = ""
+    
+    results: list = []
+    results.append(application_info)
+    
+    for content in results:
 
-    for application in application_info:
-
-        if 'name' in application:
-
-            if application['name'] == application_name:
-                # We have found the application, record the GUID
-                application_id = application['id']
-                if not print_json:
-                    print("Application ID found for [" + application_name + "]: " + application_id)
-
-                break
+        for application in content['content']:
+    
+            if 'name' in application:
+    
+                if application['name'] == application_name:
+                    # We have found the application, record the GUID
+                    application_id = application['id']
+                    if not print_json:
+                        print("Application ID found for [" + application_name + "]: " + application_id)
+    
+                    break
 
     if application_id == "":
         # we didn't find app id, so return a failure
@@ -1328,30 +1338,35 @@ def map_app_name_and_version_to_ids(host, application_name, version_name, token,
 
     application_id = ""
     version_id = ""
+    
+    results: list = []
+    results.append(application_and_versions_info)
+    
+    for content in results:
 
-    for application in application_and_versions_info:
-
-        if 'name' in application:
-
-            if application['name'] == application_name:
-                # We have found the application, record the GUID
-                application_id = application['id']
-                if not print_json:
-                    print("Application ID found for [" + application_name + "]: " + application_id)
-
-                # Now that we're in the right record for the application, find the version name
-                if 'versions' in application:
-
-                    for version in application['versions']:
-                        if 'name' in version:
-
-                            if version['name'] == version_name:
-                                # We're in the right version, record the GUID
-                                version_id = version['id']
-                                if not print_json:
-                                    print("Version ID found for [" + version_name + "]: " + version_id)
-
-                                break
+        for application in content['content']:
+    
+            if 'name' in application:
+    
+                if application['name'] == application_name:
+                    # We have found the application, record the GUID
+                    application_id = application['id']
+                    if not print_json:
+                        print("Application ID found for [" + application_name + "]: " + application_id)
+    
+                    # Now that we're in the right record for the application, find the version name
+                    if 'versions' in application:
+    
+                        for version in application['versions']:
+                            if 'name' in version:
+    
+                                if version['name'] == version_name:
+                                    # We're in the right version, record the GUID
+                                    version_id = version['id']
+                                    if not print_json:
+                                        print("Version ID found for [" + version_name + "]: " + version_id)
+    
+                                    break
 
     # check ""
     if application_id == "" or version_id == "":
@@ -1404,16 +1419,21 @@ def run_map_app_name_to_id(host, application_name, token, print_json):
 
     application_id = ""
     version_id = ""
+    
+    results: list = []
+    results.append(application_and_versions_info)
+    
+    for content in results:
 
-    for application in application_and_versions_info:
-
-        if 'name' in application:
-
-            if application['name'] == application_name:
-                # We have found the application, record the GUID
-                application_id = application['id']
-                if not print_json:
-                    print("Application ID found for [" + application_name + "]: " + application_id)
+        for application in content['content']:
+    
+            if 'name' in application:
+    
+                if application['name'] == application_name:
+                    # We have found the application, record the GUID
+                    application_id = application['id']
+                    if not print_json:
+                        print("Application ID found for [" + application_name + "]: " + application_id)
 
     # check ""
     if application_id == "":
@@ -1459,30 +1479,35 @@ def run_check_for_existing_version(host, application_name, version_name, token, 
         sys.exit(2)
 
     version_id = ""
+    
+    results: list = []
+    results.append(application_and_versions_info)
+    
+    for content in results:
+        
+        for application in content['content']:
 
-    for application in application_and_versions_info:
-
-        if 'name' in application:
-
-            if application['name'] == application_name:
-                # We have found the application
-
-                if not print_json:
-                    print("Application found for [" + application_name + "]")
-
-                # Now that we're in the right record for the application, find the version name
-                if 'versions' in application:
-
-                    for version in application['versions']:
-                        if 'name' in version:
-
-                            if version['name'] == version_name:
-                                # We're in the right version, record the GUID
-                                version_id = version['id']
-                                if not print_json:
-                                    print("Version ID found for [" + version_name + "]: " + version_id)
-
-                                break
+            if 'name' in application:
+    
+                if application['name'] == application_name:
+                    # We have found the application
+    
+                    if not print_json:
+                        print("Application found for [" + application_name + "]")
+    
+                    # Now that we're in the right record for the application, find the version name
+                    if 'versions' in application:
+    
+                        for version in application['versions']:
+                            if 'name' in version:
+    
+                                if version['name'] == version_name:
+                                    # We're in the right version, record the GUID
+                                    version_id = version['id']
+                                    if not print_json:
+                                        print("Version ID found for [" + version_name + "]: " + version_id)
+    
+                                    break
 
     if not print_json:
         print("Mapped names to id: version name [" + version_name + "] id [" + version_id + "]")
