@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import requests
 import json
 import argparse
@@ -29,6 +31,9 @@ class ids:
     version_id = ""
 
 
+
+
+
 class version_info:
     name = ""
     id = ""
@@ -40,7 +45,7 @@ def _main():
 
     # Capture command line arguments
     arg_options = argparse.ArgumentParser(
-        description="Uleska command line interface. To identify the project/pipeline to test you can specify either --application_name and --version_name, or --application and --version (passing GUIDs). (Version 0.7)", )
+        fromfile_prefix_chars='@', description="Uleska command line interface. To identify the project/pipeline to test you can specify either --application_name and --version_name, or --application and --version (passing GUIDs). Arguments can also be stored in an argparse configuration file specified with 'uleska-automate @args.txt'. (Version 0.10)", )
     arg_options.add_argument('--uleska_host',
                              help="URL to the Uleska host (e.g. https://s1.uleska.com/) (note final / is required)",
                              required=True, type=str)
