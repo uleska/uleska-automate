@@ -45,7 +45,7 @@ def _main():
 
     # Capture command line arguments
     arg_options = argparse.ArgumentParser(
-        fromfile_prefix_chars='@', description="Uleska command line interface. To identify the project/pipeline to test you can specify either --application_name and --version_name, or --application and --version (passing GUIDs). Arguments can also be stored in an argparse configuration file specified with 'uleska-automate @args.txt'. (Version 0.10)", )
+        fromfile_prefix_chars='@', description="Uleska command line interface. To identify the project/pipeline to test you can specify either --application_name and --version_name, or --application and --version (passing GUIDs). Arguments can also be stored in an argparse configuration file specified with 'uleska-automate @args.txt'. (Version 0.11)", )
     arg_options.add_argument('--uleska_host',
                              help="URL to the Uleska host (e.g. https://s1.uleska.com/) (note final / is required)",
                              required=True, type=str)
@@ -987,13 +987,24 @@ def build_and_print_report_issues(report_info, descriptor, print_json):
             this_issue.recommendation = reported_issue['recommendation']
 
         if 'vulnerabilityDefinition' in reported_issue:
-            try:
-                this_issue.CVSS = reported_issue['vulnerabilityDefinition']['standards'][0]['description'] + " : " + \
-                                  reported_issue['vulnerabilityDefinition']['standards'][0]['title']
-                this_issue.CVSS_value = float(reported_issue['vulnerabilityDefinition']['standards'][0]['description'])
-            except IndexError:
-                this_issue.CVSS_value = 0.0
-                this_issue.CVSS = "CVSS not set"
+            
+            vulnDefn = reported_issue['vulnerabilityDefinition']
+            
+            if 'standards' in vulnDefn:
+            
+                for std in vulnDefn['standards']:
+                    
+                    if 'standardCategory' in std:
+                        
+                        if std['standardCategory'] == 'CVSS':
+                            
+                            try:
+                                this_issue.CVSS = std['description'] + " : " + \
+                                                  std['title']
+                                this_issue.CVSS_value = float(std['description'])
+                            except IndexError:
+                                this_issue.CVSS_value = 0.0
+                                this_issue.CVSS = "CVSS not set"
 
         report_issues.append(this_issue)
 
